@@ -11,6 +11,10 @@ const pedidosPorPagina = 10;
 let categorias = [];
 let idEventoAtual = null;
 
+// --- VARIÁVEIS GLOBAIS PARA CONTROLE DE CANCELAMENTO ---
+let xhrImportacaoAtual = null;
+let intervaloProgressoImportacao = null;
+
 document.addEventListener("DOMContentLoaded", () => {
   lucide.createIcons();
 
@@ -51,7 +55,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         if (!response.ok) throw new Error();
-        alert("Cliente updated com sucesso!");
+        alert("Cliente atualizado com sucesso!");
         fecharModalEditar();
         carregarClientes();
       } catch (error) {
@@ -186,7 +190,7 @@ async function importarPlanilha(
     "[Importação] Iniciando temporizador de progresso visual (1% por segundo).",
   );
 
-  const intervaloProgresso = setInterval(() => {
+  intervaloProgressoImportacao = setInterval(() => {
     if (porcentagemSimulada < 95) {
       porcentagemSimulada += 1;
       atualizarModalProgresso(
@@ -198,8 +202,9 @@ async function importarPlanilha(
   }, 1000);
 
   const xhr = new XMLHttpRequest();
-  const formData = new FormData();
+  xhrImportacaoAtual = xhr; // Guarda a instância ativa para permitir o .abort()
 
+  const formData = new FormData();
   formData.append("file", arquivo);
   formData.append("evento_id", idEventoAtual);
 
@@ -209,7 +214,8 @@ async function importarPlanilha(
   xhr.open("POST", urlFinal);
 
   xhr.onload = () => {
-    clearInterval(intervaloProgresso);
+    clearInterval(intervaloProgressoImportacao);
+    xhrImportacaoAtual = null;
     console.log(`[Importação] Servidor respondeu com Status: ${xhr.status}`);
 
     if (xhr.status >= 200 && xhr.status < 300) {
@@ -253,7 +259,8 @@ async function importarPlanilha(
   };
 
   xhr.onerror = () => {
-    clearInterval(intervaloProgresso);
+    clearInterval(intervaloProgressoImportacao);
+    xhrImportacaoAtual = null;
     console.error(
       "[Importação] Falha crítica de rede (XHR onerror disparado).",
     );
@@ -261,12 +268,38 @@ async function importarPlanilha(
     alert("Erro de rede ao enviar arquivo.");
   };
 
-  xhr.send(formData);
+  xhr.onabort = () => {
+    console.log("[Importação] Requisição cancelada com sucesso no cliente.");
+  };
 
+  xhr.send(formData);
   event.target.value = "";
 }
 
-// FUNÇÕES DE CONTROLE DO MODAL DE PROGRESSO (ATUALIZADO SEM BARRA DE ROLAGEM)
+// --- FUNÇÃO PARA CANCELAR A IMPORTAÇÃO ---
+function cancelarImportacao() {
+  if (xhrImportacaoAtual) {
+    console.log("[Importação] Cancelamento solicitado pelo usuário. Abortando XHR...");
+    xhrImportacaoAtual.abort(); // Interrompe a conexão HTTP na hora
+    xhrImportacaoAtual = null;
+  }
+
+  if (intervaloProgressoImportacao) {
+    clearInterval(intervaloProgressoImportacao);
+    intervaloProgressoImportacao = null;
+  }
+
+  fecharModalProgresso();
+
+  // Limpa o valor dos inputs de ficheiro para permitir selecionar o mesmo arquivo novamente
+  const fClientes = document.getElementById("file-input");
+  const fPedidos = document.getElementById("file-input-pedidos");
+  if (fClientes) fClientes.value = "";
+  if (fPedidos) fPedidos.value = "";
+
+  alert("Importação cancelada. Nenhuma alteração foi salva no banco.");
+}
+
 function exibirModalProgresso(titulo) {
   document.getElementById("titulo-progresso").textContent = titulo;
   document.getElementById("modal-progresso-importacao").style.display = "flex";
@@ -277,7 +310,7 @@ function atualizarModalProgresso(porcentagem, mensagem) {
   const status = document.getElementById("status-progresso");
 
   if (text) text.textContent = `${porcentagem}%`;
-  if (status) status.textContent = mensagem;
+  if (status) status.textContent = mensagem; // Corrigido aqui de 'mensaje' para 'mensagem'
 }
 
 function fecharModalProgresso() {

@@ -117,7 +117,6 @@
         <div id="content-clientes" class="tab-content">
           <header>
             <div>
-              <!-- O botão voltar fica aqui dentro, sem quebrar o flex do header principal -->
               <button
                 onclick="trocarPagina('eventos')"
                 style="
@@ -235,7 +234,6 @@
 
           <section class="recent-sales">
             <h2>Lista de Pedidos</h2>
-            <!-- Adicionado overflow-x: auto para a tabela não quebrar o layout com as novas colunas -->
             <div class="table-container" style="overflow-x: auto">
               <table>
                 <thead>
@@ -255,8 +253,7 @@
                   </tr>
                 </thead>
                 <tbody id="tabela-pedidos-body">
-                  <!-- Os dados serão injetados dinamicamente via JS depois -->
-                </tbody>
+                  </tbody>
               </table>
 
               <div class="pagination-container">
@@ -528,6 +525,32 @@
         >
           0%
         </div>
+
+        <button
+          type="button"
+          id="btn-cancelar-importacao"
+          onclick="cancelarImportacao()"
+          style="
+            margin-top: 25px;
+            padding: 11px 20px;
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            font-family: inherit;
+            transition: background 0.2s, transform 0.1s;
+          "
+          onmouseover="this.style.backgroundColor='#dc2626'"
+          onmouseout="this.style.backgroundColor='#ef4444'"
+          onmousedown="this.style.transform='scale(0.98)'"
+          onmouseup="this.style.transform='scale(1)'"
+        >
+          Cancelar Importação
+        </button>
       </div>
     </div>
 
