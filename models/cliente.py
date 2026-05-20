@@ -11,9 +11,3 @@ class Cliente(Base):
     cpf = Column(String, unique=True, nullable=False)
     email = Column(String, nullable=False)
     telefone = Column(String, nullable=False)
-
-    evento_id = Column(
-        Integer,
-        ForeignKey("eventos.id"),
-        nullable=False
-    )

@@ -794,12 +794,12 @@ td:last-child {
   font-size: 0.85rem;
 }
 #upload-status {
-  display: block;     
-  width: 100%;       
-  margin-top: 10px;   
-  text-align: center; 
+  display: block;
+  width: 100%;
+  margin-top: 10px;
+  text-align: center;
   font-size: 0.8rem;
-  color: #00ff88;  
+  color: #00ff88;
 }
 .modal-actions-custom {
   display: flex;
@@ -916,4 +916,25 @@ body.light-mode .event-card-banner.no-image {
 body.light-mode .event-card-banner.no-image::after {
   color: rgba(179, 16, 16, 0.4);
   text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.8);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.7;
+  }
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }

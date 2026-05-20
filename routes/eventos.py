@@ -1,6 +1,7 @@
 from fastapi import APIRouter
 from database import SessionLocal
 from schemas.evento import EventoCreate, EventoUpdate
+from models.evento import Evento
 from services.eventos_service import (
     criar_evento,
     listar_eventos,
