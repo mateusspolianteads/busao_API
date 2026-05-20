@@ -48,17 +48,23 @@ def atualizar(id: int, cliente: ClienteUpdate):
 
 
 @router.get("/evento/{evento_id}")
-def listar_por_evento(evento_id: int):
+def listar_por_evento(
+    evento_id: int,
+    pagina: int = 1,
+    limite: int = 10,
+    search: str = "",
+):
     db = SessionLocal()
+
     try:
-        # Agora retorna a lista diretamente (mesmo se for vazia []), sem estourar 404 falso
-        return listar_clientes_por_evento(db, evento_id)
-    except HTTPException as http_ex:
-        raise http_ex
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
-            detail=f"Erro ao listar clientes do evento: {str(e)}"
+        clientes, total = listar_clientes_por_evento(
+            db, evento_id, pagina, limite, search
         )
+
+        return {
+            "clientes": clientes,
+            "total": total
+        }
+
     finally:
         db.close()
