@@ -70,7 +70,7 @@ def listar_clientes_por_evento(db, evento_id, pagina, limite, search):
     )
 
     if search:
-        query = query.filter(Cliente.nome.ilike(f"%{search}%"))
+        query = query.filter(Cliente.nome.ilike(f"{search}%"))
 
     total = query.count() 
 
