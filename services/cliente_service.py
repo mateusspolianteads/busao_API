@@ -60,13 +60,23 @@ def atualizar_cliente(db: Session, cliente_id: int, dados):
     db.refresh(cliente)
     return cliente
 
-def listar_clientes_por_evento(db: Session, evento_id: int):
-    # Retorna os clientes associados ao evento através do Pedido (pivô)
-    # Se não houver nenhum, retorna [] com status 200 de forma limpa
-    return (
+def listar_clientes_por_evento(db, evento_id, pagina, limite, search):
+
+    query = (
         db.query(Cliente)
         .join(Pedido, Cliente.id == Pedido.cliente_id)
         .filter(Pedido.evento_id == evento_id)
         .distinct()
-        .all()
+    )
+
+    if search:
+        query = query.filter(Cliente.nome.ilike(f"%{search}%"))
+
+    total = query.count() 
+
+    clientes = query.offset(
+        (pagina - 1) * limite
+    ).limit(limite).all()
+
+    return clientes, total
     )
