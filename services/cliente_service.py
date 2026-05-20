@@ -79,4 +79,3 @@ def listar_clientes_por_evento(db, evento_id, pagina, limite, search):
     ).limit(limite).all()
 
     return clientes, total
-    )
