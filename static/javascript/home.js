@@ -23,9 +23,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const fileInputClientes = document.getElementById("file-input");
   if (fileInputClientes) {
-    fileInputClientes.addEventListener(
-      "change",
-      (e) => importarPlanilha(e, "/clientes/importar-planilha"),
+    fileInputClientes.addEventListener("change", (e) =>
+      importarPlanilha(e, "/clientes/importar-planilha"),
     );
   }
 
@@ -47,6 +46,15 @@ document.addEventListener("DOMContentLoaded", () => {
         telefone: document.getElementById("edit-telefone").value,
       };
 
+      const btnSalvar = formEditarCliente.querySelector(
+        'button[type="submit"]',
+      );
+      const txtOriginal = btnSalvar ? btnSalvar.innerHTML : "";
+      if (btnSalvar) {
+        btnSalvar.disabled = true;
+        btnSalvar.innerHTML = "<span class='spinner-btn'></span> Salvando...";
+      }
+
       try {
         const response = await fetch(`${API_URL}/clientes/atualizar/${id}`, {
           method: "PUT",
@@ -61,6 +69,11 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (error) {
         console.error("Erro:", error);
         alert("Erro ao atualizar cliente.");
+      } finally {
+        if (btnSalvar) {
+          btnSalvar.disabled = false;
+          btnSalvar.innerHTML = txtOriginal;
+        }
       }
     });
   }
@@ -85,6 +98,13 @@ document.addEventListener("DOMContentLoaded", () => {
         imagem: document.getElementById("evento-imagem-url").value || null,
       };
 
+      const btnSalvar = formEvento.querySelector('button[type="submit"]');
+      const txtOriginal = btnSalvar ? btnSalvar.innerHTML : "";
+      if (btnSalvar) {
+        btnSalvar.disabled = true;
+        btnSalvar.innerHTML = "<span class='spinner-btn'></span> Salvando...";
+      }
+
       try {
         const url = id
           ? `${API_URL}/eventos/atualizar/${id}`
@@ -104,6 +124,11 @@ document.addEventListener("DOMContentLoaded", () => {
       } catch (error) {
         console.error("Erro ao salvar evento:", error);
         alert("Erro ao salvar o evento.");
+      } finally {
+        if (btnSalvar) {
+          btnSalvar.disabled = false;
+          btnSalvar.innerHTML = txtOriginal;
+        }
       }
     });
   }
@@ -144,6 +169,15 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
+  // --- OUVINTE PARA MUDANÇA DE EVENTO NO FILTRO DE PEDIDOS ---
+  const selectFiltroPedidos = document.getElementById("filtro-pedidos-evento");
+  if (selectFiltroPedidos) {
+    selectFiltroPedidos.addEventListener("change", (e) => {
+      const idSelecionado = parseInt(e.target.value);
+      if (idSelecionado) carregarPedidos(idSelecionado);
+    });
+  }
+
   const themeBtn = document.getElementById("theme-toggle");
   if (themeBtn) {
     themeBtn.addEventListener("click", () => {
@@ -157,6 +191,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   carregarEventos();
 });
+
+
 
 async function importarPlanilha(
   event,
@@ -202,7 +238,7 @@ async function importarPlanilha(
   }, 1000);
 
   const xhr = new XMLHttpRequest();
-  xhrImportacaoAtual = xhr; // Guarda a instância ativa para permitir o .abort()
+  xhrImportacaoAtual = xhr;
 
   const formData = new FormData();
   formData.append("file", arquivo);
@@ -242,7 +278,7 @@ async function importarPlanilha(
             "[Importação] Atualizando tabelas de clientes e pedidos na interface...",
           );
           carregarClientes(idEventoAtual);
-          carregarPedidos();
+          carregarPedidos(idEventoAtual);
         }, 500);
       } catch (e) {
         console.error("[Importação] Erro ao tentar ler o JSON de resposta:", e);
@@ -276,11 +312,12 @@ async function importarPlanilha(
   event.target.value = "";
 }
 
-// --- FUNÇÃO PARA CANCELAR A IMPORTAÇÃO ---
 function cancelarImportacao() {
   if (xhrImportacaoAtual) {
-    console.log("[Importação] Cancelamento solicitado pelo usuário. Abortando XHR...");
-    xhrImportacaoAtual.abort(); // Interrompe a conexão HTTP na hora
+    console.log(
+      "[Importação] Cancelamento solicitado pelo usuário. Abortando XHR...",
+    );
+    xhrImportacaoAtual.abort();
     xhrImportacaoAtual = null;
   }
 
@@ -291,7 +328,6 @@ function cancelarImportacao() {
 
   fecharModalProgresso();
 
-  // Limpa o valor dos inputs de ficheiro para permitir selecionar o mesmo arquivo novamente
   const fClientes = document.getElementById("file-input");
   const fPedidos = document.getElementById("file-input-pedidos");
   if (fClientes) fClientes.value = "";
@@ -310,7 +346,7 @@ function atualizarModalProgresso(porcentagem, mensagem) {
   const status = document.getElementById("status-progresso");
 
   if (text) text.textContent = `${porcentagem}%`;
-  if (status) status.textContent = mensagem; // Corrigido aqui de 'mensaje' para 'mensagem'
+  if (status) status.textContent = mensaje;
 }
 
 function fecharModalProgresso() {
@@ -325,6 +361,12 @@ async function carregarClientes(eventoId = null) {
     idEventoAtual = eventoId;
   }
 
+  const tabela = document.getElementById("tabela-clientes-body");
+  if (tabela) {
+    tabela.innerHTML =
+      "<tr><td colspan='7' style='text-align:center; padding: 30px; opacity: 0.7;'><span class='spinner-inline'></span> Buscando participantes...</td></tr>";
+  }
+
   try {
     const url = idEventoAtual
       ? `${API_URL}/clientes/evento/${idEventoAtual}`
@@ -332,21 +374,56 @@ async function carregarClientes(eventoId = null) {
 
     const response = await fetch(url);
 
-    if (!response.ok) throw new Error();
+    if (!response.ok)
+      throw new Error(`Erro na requisição: Status ${response.status}`);
 
-    clientes = await response.json();
+    // 1º BLINDAGEM: Lê como texto primeiro para evitar quebra se o JSON vier vazio
+    const textoResposta = await response.text();
+    if (!textoResposta.trim()) {
+      clientes = [];
+    } else {
+      clientes = JSON.parse(textoResposta);
+    }
 
-    clientes.sort((a, b) =>
-      a.nome.localeCompare(b.nome, "pt-BR", { sensitivity: "base" }),
-    );
+    // 2º BLINDAGEM: Garante que 'clientes' seja um Array (Lista)
+    if (!Array.isArray(clientes)) {
+      // Se o backend envelopou a lista em alguma propriedade conhecida:
+      if (clientes && Array.isArray(clientes.clientes)) {
+        clientes = clientes.clientes;
+      } else if (clientes && Array.isArray(clientes.data)) {
+        clientes = clientes.data;
+      } else {
+        console.error(
+          "O formato recebido do servidor não é uma lista válida:",
+          clientes,
+        );
+        clientes = [];
+      }
+    }
+
+    // 3º BLINDAGEM: Evita quebra se o campo 'nome' vier nulo ou indefinido
+    clientes.sort((a, b) => {
+      const nomeA = a && a.nome ? String(a.nome) : "";
+      const nomeB = b && b.nome ? String(b.nome) : "";
+      return nomeA.localeCompare(nomeB, "pt-BR", { sensitivity: "base" });
+    });
+
     paginaAtualClientes = 1;
     mostrarPaginaClientes();
   } catch (error) {
-    console.error("Erro ao carregar clientes:", error);
-    const tabela = document.getElementById("tabela-clientes-body");
-    if (tabela)
-      tabela.innerHTML =
-        "<tr><td colspan='7' style='text-align:center; color: #ff4d4d;'>Erro crítico ao se comunicar com o servidor.</td></tr>";
+    // Exibe o erro real detalhado no console do navegador (F12)
+    console.error("Erro detalhado no processamento de clientes:", error);
+
+    if (tabela) {
+      tabela.innerHTML = `
+        <tr>
+          <td colspan='7' style='text-align:center; color: #ff4d4d; padding: 20px;'>
+            <strong>Erro ao processar dados do servidor.</strong><br>
+            <small style="opacity:0.8; font-family: monospace;">Detalhe: ${error.message}</small>
+          </td>
+        </tr>
+      `;
+    }
   }
 }
 
@@ -382,20 +459,20 @@ function mostrarPaginaClientes() {
     const clienteJson = JSON.stringify(cliente).replace(/"/g, "&quot;");
 
     tabela.innerHTML += `
-      <tr>
-        <td><strong>${cliente.nome}</strong></td>
-        <td>${cliente.cpf || "---"}</td>
-        <td>${dataNasc}</td>
-        <td>${cliente.email}</td>
-        <td>${cliente.telefone || "---"}</td>
-        <td><span class="status paid">Ativo</span></td>
-        <td style="text-align: center;">
-          <button class="btn-edit-table" onclick="abrirModalEditar(${clienteJson})">
-            <i data-lucide="pencil" style="width: 16px;"></i>
-          </button>
-        </td>
-      </tr>
-    `;
+        <tr>
+          <td><strong>${cliente.nome}</strong></td>
+          <td>${cliente.cpf || "---"}</td>
+          <td>${dataNasc}</td>
+          <td>${cliente.email}</td>
+          <td>${cliente.telefone || "---"}</td>
+          <td><span class="status paid">Ativo</span></td>
+          <td style="text-align: center;">
+            <button class="btn-edit-table" onclick="abrirModalEditar(${clienteJson})">
+              <i data-lucide="pencil" style="width: 16px;"></i>
+            </button>
+          </td>
+        </tr>
+      `;
   });
 
   const totalPaginas = Math.ceil(clientes.length / clientesPorPagina) || 1;
@@ -446,10 +523,10 @@ async function carregarCategorias() {
     if (!selectCategoria) return;
 
     selectCategoria.innerHTML = `
-      <option value="" disabled selected hidden>
-        Selecione uma categoria
-      </option>
-    `;
+        <option value="" disabled selected hidden>
+          Selecione uma categoria
+        </option>
+      `;
 
     categorias.forEach((cat) => {
       selectCategoria.innerHTML += `<option value="${cat.id}">${cat.nome}</option>`;
@@ -460,6 +537,12 @@ async function carregarCategorias() {
 }
 
 async function carregarEventos() {
+  const gridContainer = document.getElementById("tabela-eventos-body");
+  if (gridContainer) {
+    gridContainer.innerHTML =
+      "<div style='grid-column: 1/-1; text-align: center; padding: 50px; opacity: 0.7;'><span class='spinner-inline'></span> Carregando eventos ativos...</div>";
+  }
+
   try {
     if (categorias.length === 0) {
       await carregarCategorias();
@@ -468,9 +551,15 @@ async function carregarEventos() {
     const response = await fetch(`${API_URL}/eventos/listar`);
     if (!response.ok) return;
     const eventos = await response.json();
-    const gridContainer = document.getElementById("tabela-eventos-body");
+
     if (!gridContainer) return;
     gridContainer.innerHTML = "";
+
+    if (eventos.length === 0) {
+      gridContainer.innerHTML =
+        "<div style='grid-column: 1/-1; text-align: center; padding: 50px; opacity: 0.5;'>Nenhum evento localizado.</div>";
+      return;
+    }
 
     eventos.forEach((evento) => {
       const dataFormatada =
@@ -491,6 +580,7 @@ async function carregarEventos() {
         ? objCategoria.nome
         : `ID: ${evento.categoria_id}`;
 
+      // --- AJUSTE AQUI: Adicionado o 'this' no final do onclick ---
       gridContainer.innerHTML += `
         <div class="event-card">
           <div class="event-card-banner ${classeNoImage}">
@@ -523,7 +613,7 @@ async function carregarEventos() {
                 </div>
               </div>
               
-              <button class="btn-import" onclick="verClientesDoEvento(${evento.id}, '${evento.nome.replace(/'/g, "\\'")}')" style="width: 100%; justify-content: center; margin: 0; padding: 10px;">
+              <button class="btn-import" onclick="verClientesDoEvento(${evento.id}, '${evento.nome.replace(/'/g, "\\'")}', this)" style="width: 100%; justify-content: center; margin: 0; padding: 10px;">
                 <i data-lucide="users" style="width: 16px; height: 16px;"></i>
                 Ver Participantes
               </button>
@@ -535,6 +625,39 @@ async function carregarEventos() {
     lucide.createIcons();
   } catch (error) {
     console.error("Erro ao carregar eventos:", error);
+  }
+}
+
+// --- AJUSTE AQUI: Nova verClientesDoEvento controlando o estado do botão ---
+async function verClientesDoEvento(idEvento, nomeEvento, botao) {
+  const titulo = document.getElementById("titulo-clientes-evento");
+  const subtitulo = document.getElementById("subtitulo-clientes-evento");
+
+  if (titulo) titulo.innerText = `Clientes: ${nomeEvento}`;
+  if (subtitulo)
+    subtitulo.innerText = `Gerenciando participantes do evento #${idEvento}`;
+
+  let txtOriginal = "";
+  if (botao) {
+    botao.disabled = true;
+    txtOriginal = botao.innerHTML;
+    botao.innerHTML = "<span class='spinner-btn'></span> Buscando...";
+  }
+
+  try {
+    // Aguarda a busca de dados terminar
+    await carregarClientes(idEvento);
+    // Só muda de página se a busca não disparar uma exceção grave
+    trocarPagina("clientes");
+  } catch (error) {
+    console.error("Erro na transição de página dos participantes:", error);
+  } finally {
+    // Restaura o estado original do botão após terminar tudo
+    if (botao) {
+      botao.disabled = false;
+      botao.innerHTML = txtOriginal;
+      lucide.createIcons(); // Recria o ícone do bonequinho de usuários
+    }
   }
 }
 
@@ -665,15 +788,103 @@ function fecharModalEvento() {
   document.getElementById("modal-evento").style.display = "none";
 }
 
-async function carregarPedidos() {
+// --- FUNÇÃO PARA POPULAR O SELECT DE FILTRO DE EVENTOS (OTIMIZADA) ---
+async function popularFiltroEventosPedidos(idSelecionado) {
+  const selectFiltro = document.getElementById("filtro-pedidos-evento");
+  if (!selectFiltro) return;
+
+  if (selectFiltro.options.length > 1) {
+    selectFiltro.value = idSelecionado;
+    return;
+  }
+
   try {
-    const response = await fetch(`${API_URL}/pedidos/listar`);
+    const response = await fetch(`${API_URL}/eventos/listar`);
+    if (!response.ok) return;
+    const eventos = await response.json();
+
+    selectFiltro.innerHTML = "";
+
+    if (eventos.length === 0) {
+      selectFiltro.innerHTML = `<option value="">Nenhum evento cadastrado</option>`;
+      return;
+    }
+
+    eventos.forEach((ev) => {
+      selectFiltro.innerHTML += `<option value="${ev.id}">${ev.nome}</option>`;
+    });
+
+    selectFiltro.value = idSelecionado;
+  } catch (error) {
+    console.error("Erro ao popular filtro de eventos em pedidos:", error);
+  }
+}
+
+// --- AJUSTE: CARREGAR PEDIDOS FILTRADOS POR EVENTO ---
+async function carregarPedidos(eventoId = null) {
+  if (eventoId !== null) {
+    idEventoAtual = eventoId;
+  }
+
+  // Exibe o feedback visual de loading na tabela imediatamente ao chamar a função
+  exibirMensagemTabelaPedidos(
+    "<span class='spinner-inline'></span> Buscando pedidos atualizados...",
+  );
+
+  // Fallback: se não houver evento em memória, busca o primeiro cadastrado
+  if (!idEventoAtual) {
+    try {
+      const resEventos = await fetch(`${API_URL}/eventos/listar`);
+      if (resEventos.ok) {
+        const eventos = await resEventos.json();
+        if (eventos.length > 0) {
+          idEventoAtual = eventos[0].id;
+        } else {
+          exibirMensagemTabelaPedidos(
+            "Nenhum evento cadastrado para carregar pedidos.",
+          );
+          return;
+        }
+      }
+    } catch (error) {
+      console.error("Erro ao buscar evento inicial para pedidos:", error);
+      exibirMensagemTabelaPedidos("Erro ao inicializar filtro de eventos.");
+      return;
+    }
+  }
+
+  // Sincroniza o select visual se ele existir na tela
+  await popularFiltroEventosPedidos(idEventoAtual);
+
+  try {
+    const response = await fetch(`${API_URL}/pedidos/evento/${idEventoAtual}`);
+
+    // Tratamento estruturado do status 404 (Sem registros de pedidos)
+    if (response.status === 404) {
+      pedidos = [];
+      paginaAtualPedidos = 1;
+      mostrarPaginaPedidos();
+      return;
+    }
+
     if (!response.ok) throw new Error();
+
     pedidos = await response.json();
     paginaAtualPedidos = 1;
     mostrarPaginaPedidos();
   } catch (error) {
-    console.error(error);
+    console.error("Erro ao buscar pedidos no servidor:", error);
+    exibirMensagemTabelaPedidos(
+      "Erro crítico ao se comunicar com o servidor.",
+      "#ff4d4d",
+    );
+  }
+}
+
+function exibirMensagemTabelaPedidos(mensagem, cor = "var(--text-dim)") {
+  const tabela = document.getElementById("tabela-pedidos-body");
+  if (tabela) {
+    tabela.innerHTML = `<tr><td colspan='12' style='text-align:center; padding: 30px; color: ${cor};'>${mensagem}</td></tr>`;
   }
 }
 
@@ -681,6 +892,26 @@ function mostrarPaginaPedidos() {
   const tabela = document.getElementById("tabela-pedidos-body");
   if (!tabela) return;
   tabela.innerHTML = "";
+
+  // Tratamento visual limpo para lista de pedidos vazia
+  if (pedidos.length === 0) {
+    tabela.innerHTML = `
+        <tr>
+          <td colspan='12' style='text-align:center; opacity: 0.6; padding: 20px;'>
+            Nenhum pedido encontrado para este evento.
+          </td>
+        </tr>
+      `;
+    if (document.getElementById("current-page-pedidos"))
+      document.getElementById("current-page-pedidos").textContent = 1;
+    if (document.getElementById("total-pages-pedidos"))
+      document.getElementById("total-pages-pedidos").textContent = 1;
+    if (document.getElementById("prev-page-pedidos"))
+      document.getElementById("prev-page-pedidos").disabled = true;
+    if (document.getElementById("next-page-pedidos"))
+      document.getElementById("next-page-pedidos").disabled = true;
+    return;
+  }
 
   const totalPaginas = Math.ceil(pedidos.length / pedidosPorPagina) || 1;
 
@@ -706,21 +937,21 @@ function mostrarPaginaPedidos() {
     const aprovado = pedido.aprovado ? "Sim" : "Não";
 
     tabela.innerHTML += `
-      <tr>
-        <td>#${pedido.id}</td>
-        <td><strong>${pedido.cliente_nome || "---"}</strong></td>
-        <td>${pedido.evento_nome || "---"}</td>
-        <td>${dataVenda}</td>
-        <td>${pedido.status_pedido || "---"}</td>
-        <td>${pedido.status_ingresso || "---"}</td>
-        <td>${pedido.lote || "---"}</td>
-        <td>${valorLote}</td>
-        <td>${pedido.canal_venda || "---"}</td>
-        <td>${pedido.metodo_pagamento || "---"}</td>
-        <td>${transferido}</td>
-        <td>${aprovado}</td>
-      </tr>
-    `;
+        <tr>
+          <td>#${pedido.id}</td>
+          <td><strong>${pedido.cliente_nome || "---"}</strong></td>
+          <td>${pedido.evento_nome || "---"}</td>
+          <td>${dataVenda}</td>
+          <td>${pedido.status_pedido || "---"}</td>
+          <td>${pedido.status_ingresso || "---"}</td>
+          <td>${pedido.lote || "---"}</td>
+          <td>${valorLote}</td>
+          <td>${pedido.canal_venda || "---"}</td>
+          <td>${pedido.metodo_pagamento || "---"}</td>
+          <td>${transferido}</td>
+          <td>${aprovado}</td>
+        </tr>
+      `;
   });
 
   const spanAtual = document.getElementById("current-page-pedidos");

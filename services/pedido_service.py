@@ -36,3 +36,11 @@ def consultar_pedido(db: Session, pedido_id: int):
             status_code=status.HTTP_404_NOT_FOUND, detail="Pedido não encontrado"
         )
     return pedido
+
+def listar_pedido_por_evento(db: Session, evento_id: int):
+    pedidos = db.query(Pedido).filter(Pedido.evento_id == evento_id).all()
+    if not pedidos:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Nenhum pedido encontrado para este evento"
+        )
+    return pedidos 

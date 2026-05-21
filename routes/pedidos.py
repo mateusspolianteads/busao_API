@@ -1,20 +1,16 @@
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, HTTPException, status
 from database import SessionLocal
-import pandas as pd
-from io import BytesIO
 from models.cliente import Cliente
 from models.evento import Evento
-
 from models.pedido import Pedido
 
 router = APIRouter(prefix="/pedidos", tags=["Pedidos"])
 
 
-@router.get("/listar")
-def listar():
+@router.get("/evento/{evento_id}")
+def listar_por_evento(evento_id: int):
     db = SessionLocal()
     try:
-        # A query retorna tuplas, onde cada item corresponde aos campos selecionados
         resultados = (
             db.query(
                 Pedido.id,
@@ -32,10 +28,18 @@ def listar():
             )
             .join(Cliente, Pedido.cliente_id == Cliente.id)
             .join(Evento, Pedido.evento_id == Evento.id)
+            .filter(Pedido.evento_id == evento_id)
             .all()
         )
 
-        # CONVERSÃO PARA LISTA DE DICIONÁRIOS
+        # Se nenhum pedido for encontrado para o evento, lança o erro 404
+        if not resultados:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND, 
+                detail="Nenhum pedido encontrado para este evento"
+            )
+
+        # Retorna os dados mapeados no formato que o frontend consome
         lista_pedidos = []
         for p in resultados:
             lista_pedidos.append(
@@ -59,58 +63,3 @@ def listar():
 
     finally:
         db.close()
-
-
-""" @router.post("/importar-planilha")
-async def importar_planilha(file: UploadFile = File(...)):
-    db = SessionLocal()
-
-    try:
-        conteudo = await file.read()
-
-        if file.filename.endswith(".xlsx"):
-            df = pd.read_excel(BytesIO(conteudo))
-
-        elif file.filename.endswith(".xls"):
-            df = pd.read_excel(BytesIO(conteudo))
-
-        else:
-            return {"erro": "Formato inválido"}
-
-        df.columns = df.columns.str.strip().str.lower().str.replace(" ", "_")
-
-        pedidos_importados = []
-
-        for _, row in df.iterrows():
-
-            pedido = Pedido(
-                cliente_id=int(row["cliente_id"]),
-                evento_id=int(row["evento_id"]),
-                data_venda=row.get("data_venda"),
-                status_pedido=str(row.get("status_pedido", "")),
-                status_ingresso=str(row.get("status_ingresso", "")),
-                lote=row.get("lote"),
-                valor_lote=row.get("valor_lote"),
-                canal_venda=row.get("canal_venda"),
-                metodo_pagamento=row.get("metodo_pagamento"),
-                transferido=bool(row.get("transferido", False)),
-                aprovado=bool(row.get("aprovado", False))
-            )
-
-            db.add(pedido)
-
-            pedidos_importados.append({
-                "cliente_id": pedido.cliente_id,
-                "evento_id": pedido.evento_id
-            })
-
-        db.commit()
-
-        return {
-            "mensagem": "Importação de pedidos finalizada",
-            "total_importados": len(pedidos_importados),
-            "pedidos_importados": pedidos_importados
-        }
-
-    finally:
-        db.close() """

@@ -19,11 +19,9 @@ body.light-mode {
   --text-dim: #666666;
   --glass: rgba(0, 0, 0, 0.05);
   --border: rgba(0, 0, 0, 0.1);
-  background-image: radial-gradient(
-    circle at 50% -20%,
-    #ffdbdb 0%,
-    transparent 50%
-  );
+  background-image: radial-gradient(circle at 50% -20%,
+      #ffdbdb 0%,
+      transparent 50%);
 }
 
 * {
@@ -36,11 +34,9 @@ body.light-mode {
 body {
   background-color: var(--bg-dark);
   color: var(--text-main);
-  background-image: radial-gradient(
-    circle at 50% -20%,
-    #3a0000 0%,
-    transparent 50%
-  );
+  background-image: radial-gradient(circle at 50% -20%,
+      #3a0000 0%,
+      transparent 50%);
   background-attachment: fixed;
   min-height: 100vh;
   transition: background 0.3s ease;
@@ -107,11 +103,9 @@ body {
 }
 
 .nav-link.active {
-  background: linear-gradient(
-    45deg,
-    var(--primary-dark),
-    var(--primary)
-  ) !important;
+  background: linear-gradient(45deg,
+      var(--primary-dark),
+      var(--primary)) !important;
   color: #fff !important;
   box-shadow: 0 10px 20px rgba(139, 0, 0, 0.4);
 }
@@ -142,6 +136,7 @@ body {
     opacity: 0;
     transform: translateY(10px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -313,7 +308,8 @@ td:last-child {
   display: grid !important;
   /* Cria colunas dinâmicas: tamanho mínimo de 240px e máximo de 1fr (distribui o espaço igualmente) */
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)) !important;
-  gap: 20px; /* Espaçamento mais elegante entre os cards */
+  gap: 20px;
+  /* Espaçamento mais elegante entre os cards */
   margin-top: 20px;
   width: 100%;
   box-sizing: border-box;
@@ -322,7 +318,8 @@ td:last-child {
 .event-card {
   background: var(--card-bg);
   border: 1px solid var(--border);
-  border-radius: 12px; /* Cantos levemente mais arredondados para combinar com o layout */
+  border-radius: 12px;
+  /* Cantos levemente mais arredondados para combinar com o layout */
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -331,8 +328,10 @@ td:last-child {
     box-shadow 0.2s ease,
     border-color 0.2s ease;
   position: relative;
-  width: 100%; /* Ocupa o espaço gerado pela coluna do Grid */
-  height: 100%; /* Garante que todos os cards da mesma linha tenham a mesma altura */
+  width: 100%;
+  /* Ocupa o espaço gerado pela coluna do Grid */
+  height: 100%;
+  /* Garante que todos os cards da mesma linha tenham a mesma altura */
 }
 
 .event-card:hover {
@@ -343,7 +342,8 @@ td:last-child {
 
 .event-card-banner {
   width: 100%;
-  aspect-ratio: 16 / 9; /* Padrão moderno widescreen */
+  aspect-ratio: 16 / 9;
+  /* Padrão moderno widescreen */
   position: relative;
   background: #161616;
   overflow: hidden;
@@ -357,15 +357,18 @@ td:last-child {
 }
 
 .event-card-body {
-  padding: 16px; /* Mais respiro para as informações */
+  padding: 16px;
+  /* Mais respiro para as informações */
   display: flex;
   flex-direction: column;
   gap: 8px;
-  flex-grow: 1; /* Faz o corpo expandir e alinhar os rodapés */
+  flex-grow: 1;
+  /* Faz o corpo expandir e alinhar os rodapés */
 }
 
 .event-card-title {
-  font-size: 0.95rem; /* Fonte ligeiramente maior para melhor leitura */
+  font-size: 0.95rem;
+  /* Fonte ligeiramente maior para melhor leitura */
   font-weight: 700;
   color: var(--text-main);
   line-height: 1.3;
@@ -392,7 +395,8 @@ td:last-child {
 }
 
 .event-card-footer {
-  margin-top: auto; /* Empurra o rodapé sempre para a base do card */
+  margin-top: auto;
+  /* Empurra o rodapé sempre para a base do card */
   padding-top: 12px;
   border-top: 1px solid var(--border);
   display: flex;
@@ -442,6 +446,7 @@ td:last-child {
   width: 14px !important;
   height: 14px !important;
 }
+
 .event-card-body {
   padding: 10px;
   display: flex;
@@ -793,6 +798,7 @@ td:last-child {
   cursor: pointer;
   font-size: 0.85rem;
 }
+
 #upload-status {
   display: block;
   width: 100%;
@@ -801,6 +807,7 @@ td:last-child {
   font-size: 0.8rem;
   color: #00ff88;
 }
+
 .modal-actions-custom {
   display: flex;
   flex-direction: column;
@@ -848,6 +855,7 @@ body.light-mode #modal-evento .modal-content {
   background: #ffffff;
   border: 1px solid var(--border);
 }
+
 body.light-mode .form-group-custom input[type="text"],
 body.light-mode .form-group-custom input[type="number"],
 body.light-mode .form-group-custom input[type="datetime-local"],
@@ -856,23 +864,28 @@ body.light-mode .form-group-custom select {
   border: 1px solid #dddddd;
   color: #1a1a1a;
 }
+
 body.light-mode .btn-cancel-custom {
   color: #888888;
 }
+
 body.light-mode .btn-cancel-custom:hover {
   color: #000000;
 }
+
 body.light-mode .event-card-category {
   background: rgba(255, 255, 255, 0.85);
   border-color: rgba(0, 0, 0, 0.1);
 }
+
 body.light-mode .event-card-actions {
   background: rgba(255, 255, 255, 0.6);
 }
 
 /* --- ESTILO PARA CARD SEM IMAGEM --- */
 .event-card-banner.no-image {
-  background-color: #050505; /* Deixei mais escuro (cinza quase preto absoluto) como pediu */
+  background-color: #050505;
+  /* Deixei mais escuro (cinza quase preto absoluto) como pediu */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -919,11 +932,13 @@ body.light-mode .event-card-banner.no-image::after {
 }
 
 @keyframes pulse {
+
   0%,
   100% {
     transform: scale(1);
     opacity: 1;
   }
+
   50% {
     transform: scale(1.1);
     opacity: 0.7;
@@ -934,7 +949,99 @@ body.light-mode .event-card-banner.no-image::after {
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
+}
+
+/* Container do Filtro */
+.filter-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding: 14px 18px;
+  background-color: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Label/Texto de instrução */
+.filter-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dim, #a0aec0);
+}
+
+/* Select Customizado (Modo Escuro Padrão) */
+.filter-select {
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  color: #ffffff;
+  background-color: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  min-width: 260px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Estados de Interação (Modo Escuro) */
+.filter-select:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.filter-select:focus {
+  border-color: #00ff88;
+  /* Tom verde de sucesso do seu projeto */
+  box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.15);
+}
+
+/* Opções internas do Select (Modo Escuro) */
+.filter-select option {
+  background-color: #18181c;
+  /* Fundo escuro para os itens do menu */
+  color: #ffffff;
+  padding: 8px;
+}
+
+
+/* ==========================================
+   ADAPTAÇÃO COMPATÍVEL COM O MODO CLARO
+   ========================================== */
+body.light-mode .filter-container {
+  background-color: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+body.light-mode .filter-label {
+  color: #4a5568;
+}
+
+body.light-mode .filter-select {
+  color: #1a202c;
+  background-color: #ffffff;
+  border-color: rgba(0, 0, 0, 0.15);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+body.light-mode .filter-select:hover {
+  background-color: #f7fafc;
+  border-color: rgba(0, 0, 0, 0.25);
+}
+
+body.light-mode .filter-select:focus {
+  border-color: #00aa5b;
+  /* Tom verde adaptado para melhor contraste no claro */
+  box-shadow: 0 0 0 3px rgba(0, 170, 91, 0.15);
+}
+
+body.light-mode .filter-select option {
+  background-color: #ffffff;
+  color: #1a202c;
 }
