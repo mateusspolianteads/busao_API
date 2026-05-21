@@ -6,9 +6,8 @@ from models.pedido import Pedido
 
 router = APIRouter(prefix="/pedidos", tags=["Pedidos"])
 
-
 @router.get("/evento/{evento_id}")
-def listar_por_evento(evento_id: int):
+def listar_por_evento(evento_id: int, skip: int = 0, limit: int = 10):
     db = SessionLocal()
     try:
         resultados = (
@@ -29,15 +28,13 @@ def listar_por_evento(evento_id: int):
             .join(Cliente, Pedido.cliente_id == Cliente.id)
             .join(Evento, Pedido.evento_id == Evento.id)
             .filter(Pedido.evento_id == evento_id)
+            .offset(skip)
+            .limit(limit) 
             .all()
         )
 
-        # Se nenhum pedido for encontrado para o evento, lança o erro 404
-        if not resultados:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND, 
-                detail="Nenhum pedido encontrado para este evento"
-            )
+        # RETIRADO O ERRO 404 AQUI. 
+        # Se não tiver dados (ex: página 2 vazia), ele simplesmente desce e retorna a lista vazia [].
 
         # Retorna os dados mapeados no formato que o frontend consome
         lista_pedidos = []
