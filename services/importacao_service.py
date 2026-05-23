@@ -38,11 +38,13 @@ async def processar_planilha_clientes_e_pedidos(
     pedidos_importados = 0
 
     cpf_para_id_map = {c[0]: c[1] for c in db.query(Cliente.cpf, Cliente.id).all()}
-    pedidos_no_banco = {p_id[0] for p_id in db.query(Pedido.id).all()}
+    pedidos_no_banco = {
+    (p.cliente_id, p.evento_id)
+    for p in db.query(Pedido.cliente_id, Pedido.evento_id).all()
+}
 
     col_telefone = "telefone_do_comprador" if "telefone_do_comprador" in df.columns else "telefone"
     col_nasc = "data_de_nascimento" if "data_de_nascimento" in df.columns else "data_nascimento"
-    col_id_pedido = "id_do_pedido" if "id_do_pedido" in df.columns else "id"
     col_data_venda = "data_de_venda" if "data_de_venda" in df.columns else "data_venda"
     col_status_pedido = "status_do_pedido" if "status_do_pedido" in df.columns else "status_pedido"
     col_status_ingresso = "status_do_ingresso" if "status_do_ingresso" in df.columns else "status_ingresso"
@@ -56,7 +58,6 @@ async def processar_planilha_clientes_e_pedidos(
         return str(raw_cpf).strip().replace(".0", "")
 
     df["_cpf_limpo"] = df["cpf"].apply(limpar_cpf) if "cpf" in df.columns else None
-    df["_id_pedido_limpo"] = pd.to_numeric(df[col_id_pedido], errors='coerce').fillna(-1).astype(int) if col_id_pedido in df.columns else -1
     df["_data_nasc_limpa"] = pd.to_datetime(df[col_nasc], errors='coerce').dt.date if col_nasc in df.columns else None
     df["_data_venda_limpa"] = pd.to_datetime(df[col_data_venda], errors='coerce') if col_data_venda in df.columns else None
 
@@ -121,7 +122,11 @@ async def processar_planilha_clientes_e_pedidos(
             cliente_id = cpf_para_id_map.get(cpf)
             id_pedido = row.get("_id_pedido_limpo")
 
-            if id_pedido == -1 or id_pedido in pedidos_no_banco: continue
+            if id_pedido == -1:
+                continue
+
+            if (cliente_id, evento_id) in pedidos_no_banco:
+                continue
 
             try:
                 data_venda_val = row.get("_data_venda_limpa")
@@ -138,7 +143,6 @@ async def processar_planilha_clientes_e_pedidos(
                     aprovado_val = "--"
 
                 novo_pedido = Pedido(
-                    id=int(id_pedido),
                     cliente_id=cliente_id,
                     evento_id=evento_id,
                     data_venda=data_venda_val.to_pydatetime() if pd.notna(data_venda_val) else datetime.now(),
@@ -152,7 +156,7 @@ async def processar_planilha_clientes_e_pedidos(
                     aprovado=str(aprovado_val).strip()
                 )
                 db.add(novo_pedido)
-                pedidos_no_banco.add(id_pedido)
+                pedidos_no_banco.add((cliente_id, evento_id))
                 pedidos_importados += 1
             except Exception as e:
                 db.rollback()

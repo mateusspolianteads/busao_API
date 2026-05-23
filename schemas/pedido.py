@@ -4,6 +4,7 @@ from typing import Optional
 
 
 class PedidoBase(BaseModel):
+
     cliente_id: int
     evento_id: int
     data_venda: datetime

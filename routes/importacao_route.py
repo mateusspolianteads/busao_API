@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from database import get_db 
 from services.importacao_service import processar_planilha_clientes_e_pedidos
 
-router = APIRouter(prefix="/clientes", tags=["Importação"]) 
+router = APIRouter(prefix="/pedidos", tags=["Importação"]) 
 
 @router.post("/importar-planilha", status_code=201)
 async def importar_clientes_e_pedidos_planilha(
