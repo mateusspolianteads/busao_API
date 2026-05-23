@@ -3,10 +3,12 @@ const API_URL = "http://localhost:8000";
 let clientes = [];
 let paginaAtualClientes = 1;
 const clientesPorPagina = 10;
+let totalClientesBanco = 0;
 
 let pedidos = [];
 let paginaAtualPedidos = 1;
 const pedidosPorPagina = 10;
+let totalPedidosBanco = 0;
 
 let categorias = [];
 let idEventoAtual = null;
@@ -139,33 +141,46 @@ document.addEventListener("DOMContentLoaded", () => {
     prevBtn.addEventListener("click", () => {
       if (paginaAtualClientes > 1) {
         paginaAtualClientes--;
-        mostrarPaginaClientes();
+        carregarClientes();
       }
     });
+
   if (nextBtn)
     nextBtn.addEventListener("click", () => {
-      if (
-        paginaAtualClientes < Math.ceil(clientes.length / clientesPorPagina)
-      ) {
+
+      console.log("ANTES", paginaAtualPedidos);
+
+      const totalPaginas = Math.ceil(
+        totalClientesBanco / clientesPorPagina
+      );
+
+      if (paginaAtualClientes < totalPaginas) {
         paginaAtualClientes++;
-        mostrarPaginaClientes();
+        carregarClientes();
       }
     });
 
   const prevBtnPed = document.getElementById("prev-page-pedidos");
   const nextBtnPed = document.getElementById("next-page-pedidos");
+
+
   if (prevBtnPed)
     prevBtnPed.addEventListener("click", () => {
       if (paginaAtualPedidos > 1) {
         paginaAtualPedidos--;
-        mostrarPaginaPedidos();
+        console.log("DEPOIS", paginaAtualPedidos);
+        carregarPedidos();
       }
     });
   if (nextBtnPed)
     nextBtnPed.addEventListener("click", () => {
-      if (paginaAtualPedidos < Math.ceil(pedidos.length / pedidosPorPagina)) {
+      const totalPaginas = Math.ceil(
+        totalPedidosBanco / pedidosPorPagina
+      );
+
+      if (paginaAtualPedidos < totalPaginas) {
         paginaAtualPedidos++;
-        mostrarPaginaPedidos();
+        carregarPedidos();
       }
     });
 
@@ -346,7 +361,7 @@ function atualizarModalProgresso(porcentagem, mensagem) {
   const status = document.getElementById("status-progresso");
 
   if (text) text.textContent = `${porcentagem}%`;
-  if (status) status.textContent = mensaje;
+  if (status) status.textContent = mensagem;
 }
 
 function fecharModalProgresso() {
@@ -359,6 +374,7 @@ function fecharModalProgresso() {
 async function carregarClientes(eventoId = null) {
   if (eventoId !== null) {
     idEventoAtual = eventoId;
+    paginaAtualClientes = 1;
   }
 
   const tabela = document.getElementById("tabela-clientes-body");
@@ -369,7 +385,7 @@ async function carregarClientes(eventoId = null) {
 
   try {
     const url = idEventoAtual
-      ? `${API_URL}/clientes/evento/${idEventoAtual}`
+      ? `${API_URL}/clientes/evento/${idEventoAtual}?pagina=${paginaAtualClientes}&limite=10`
       : `${API_URL}/clientes/listar`;
 
     const response = await fetch(url);
@@ -377,41 +393,31 @@ async function carregarClientes(eventoId = null) {
     if (!response.ok)
       throw new Error(`Erro na requisição: Status ${response.status}`);
 
-    // 1º BLINDAGEM: Lê como texto primeiro para evitar quebra se o JSON vier vazio
     const textoResposta = await response.text();
+    let dadosBrutos;
+
     if (!textoResposta.trim()) {
-      clientes = [];
+      dadosBrutos = [];
     } else {
-      clientes = JSON.parse(textoResposta);
+      dadosBrutos = JSON.parse(textoResposta);
     }
 
-    // 2º BLINDAGEM: Garante que 'clientes' seja um Array (Lista)
-    if (!Array.isArray(clientes)) {
-      // Se o backend envelopou a lista em alguma propriedade conhecida:
-      if (clientes && Array.isArray(clientes.clientes)) {
-        clientes = clientes.clientes;
-      } else if (clientes && Array.isArray(clientes.data)) {
-        clientes = clientes.data;
-      } else {
-        console.error(
-          "O formato recebido do servidor não é uma lista válida:",
-          clientes,
-        );
-        clientes = [];
-      }
+    if (dadosBrutos && typeof dadosBrutos === "object" && !Array.isArray(dadosBrutos)) {
+      totalClientesBanco = dadosBrutos.total || 0;
+      clientes = dadosBrutos.clientes || [];
+    } else {
+      clientes = Array.isArray(dadosBrutos) ? dadosBrutos : [];
+      totalClientesBanco = clientes.length;
     }
 
-    // 3º BLINDAGEM: Evita quebra se o campo 'nome' vier nulo ou indefinido
     clientes.sort((a, b) => {
       const nomeA = a && a.nome ? String(a.nome) : "";
       const nomeB = b && b.nome ? String(b.nome) : "";
       return nomeA.localeCompare(nomeB, "pt-BR", { sensitivity: "base" });
     });
 
-    paginaAtualClientes = 1;
     mostrarPaginaClientes();
   } catch (error) {
-    // Exibe o erro real detalhado no console do navegador (F12)
     console.error("Erro detalhado no processamento de clientes:", error);
 
     if (tabela) {
@@ -446,15 +452,11 @@ function mostrarPaginaClientes() {
     return;
   }
 
-  const inicio = (paginaAtualClientes - 1) * clientesPorPagina;
-  const fim = inicio + clientesPorPagina;
-  const clientesPagina = clientes.slice(inicio, fim);
-
-  clientesPagina.forEach((cliente) => {
+  clientes.forEach((cliente) => {
     const dataNasc = cliente.data_nascimento
       ? new Date(cliente.data_nascimento).toLocaleDateString("pt-BR", {
-          timeZone: "UTC",
-        })
+        timeZone: "UTC",
+      })
       : "---";
     const clienteJson = JSON.stringify(cliente).replace(/"/g, "&quot;");
 
@@ -475,18 +477,36 @@ function mostrarPaginaClientes() {
       `;
   });
 
-  const totalPaginas = Math.ceil(clientes.length / clientesPorPagina) || 1;
+  const totalGeralDoBanco = totalClientesBanco || clientes.length;
+  const totalPaginas = Math.ceil(totalGeralDoBanco / clientesPorPagina) || 1;
+
   if (document.getElementById("current-page"))
     document.getElementById("current-page").textContent = paginaAtualClientes;
   if (document.getElementById("total-pages"))
     document.getElementById("total-pages").textContent = totalPaginas;
+
+  // Bloqueia ou libera os botões de Avançar e Voltar baseado na página correta
   if (document.getElementById("prev-page"))
     document.getElementById("prev-page").disabled = paginaAtualClientes === 1;
   if (document.getElementById("next-page"))
-    document.getElementById("next-page").disabled =
-      paginaAtualClientes === totalPaginas;
+    document.getElementById("next-page").disabled = paginaAtualClientes === totalPaginas;
 
   lucide.createIcons();
+}
+
+function proximaPaginaClientes() {
+  const totalPaginas = Math.ceil(window.totalClientesBanco / clientesPorPagina) || 1;
+  if (paginaAtualClientes < totalPaginas) {
+    paginaAtualClientes++;
+    carregarClientes();
+  }
+}
+
+function paginaAnteriorClientes() {
+  if (paginaAtualClientes > 1) {
+    paginaAtualClientes--;
+    carregarClientes();
+  }
 }
 
 async function verClientesDoEvento(idEvento, nomeEvento) {
@@ -822,8 +842,9 @@ async function popularFiltroEventosPedidos(idSelecionado) {
 
 // --- AJUSTE: CARREGAR PEDIDOS FILTRADOS POR EVENTO ---
 async function carregarPedidos(eventoId = null) {
-  if (eventoId !== null) {
+  if (eventoId !== null && eventoId !== idEventoAtual) {
     idEventoAtual = eventoId;
+    paginaAtualPedidos = 1;
   }
 
   // Exibe o feedback visual de loading na tabela imediatamente ao chamar a função
@@ -857,7 +878,9 @@ async function carregarPedidos(eventoId = null) {
   await popularFiltroEventosPedidos(idEventoAtual);
 
   try {
-    const response = await fetch(`${API_URL}/pedidos/evento/${idEventoAtual}`);
+    const response = await fetch(
+      `${API_URL}/pedidos/evento/${idEventoAtual}?pagina=${paginaAtualPedidos}&limite=${pedidosPorPagina}`
+    );
 
     // Tratamento estruturado do status 404 (Sem registros de pedidos)
     if (response.status === 404) {
@@ -869,8 +892,10 @@ async function carregarPedidos(eventoId = null) {
 
     if (!response.ok) throw new Error();
 
-    pedidos = await response.json();
-    paginaAtualPedidos = 1;
+    const dados = await response.json();
+
+    pedidos = dados.pedidos || [];
+    totalPedidosBanco = dados.total || 0;
     mostrarPaginaPedidos();
   } catch (error) {
     console.error("Erro ao buscar pedidos no servidor:", error);
@@ -893,7 +918,6 @@ function mostrarPaginaPedidos() {
   if (!tabela) return;
   tabela.innerHTML = "";
 
-  // Tratamento visual limpo para lista de pedidos vazia
   if (pedidos.length === 0) {
     tabela.innerHTML = `
         <tr>
@@ -913,24 +937,21 @@ function mostrarPaginaPedidos() {
     return;
   }
 
-  const totalPaginas = Math.ceil(pedidos.length / pedidosPorPagina) || 1;
+  const totalPaginas =
+    Math.ceil(totalPedidosBanco / pedidosPorPagina) || 1;
 
   if (paginaAtualPedidos > totalPaginas) paginaAtualPedidos = totalPaginas;
   if (paginaAtualPedidos < 1) paginaAtualPedidos = 1;
 
-  const inicio = (paginaAtualPedidos - 1) * pedidosPorPagina;
-  const fim = inicio + pedidosPorPagina;
-  const pedidosPagina = pedidos.slice(inicio, fim);
-
-  pedidosPagina.forEach((pedido) => {
+  pedidos.forEach((pedido) => {
     const dataVenda = pedido.data_venda
       ? new Date(pedido.data_venda).toLocaleDateString("pt-BR")
       : "---";
     const valorLote = pedido.valor_lote
       ? parseFloat(pedido.valor_lote).toLocaleString("pt-BR", {
-          style: "currency",
-          currency: "BRL",
-        })
+        style: "currency",
+        currency: "BRL",
+      })
       : "R$ 0,00";
 
     const transferido = pedido.transferido ? "Sim" : "Não";
@@ -962,6 +983,7 @@ function mostrarPaginaPedidos() {
 
   const prevBtnPed = document.getElementById("prev-page-pedidos");
   const nextBtnPed = document.getElementById("next-page-pedidos");
+  console.log("BOTAO PEDIDOS:", nextBtnPed);
 
   if (prevBtnPed) prevBtnPed.disabled = paginaAtualPedidos === 1;
   if (nextBtnPed) nextBtnPed.disabled = paginaAtualPedidos >= totalPaginas;
