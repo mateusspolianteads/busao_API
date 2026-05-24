@@ -13,7 +13,6 @@ let totalPedidosBanco = 0;
 let categorias = [];
 let idEventoAtual = null;
 
-// --- VARIÁVEIS GLOBAIS PARA CONTROLE DE CANCELAMENTO ---
 let xhrImportacaoAtual = null;
 let intervaloProgressoImportacao = null;
 
@@ -26,15 +25,13 @@ document.addEventListener("DOMContentLoaded", () => {
   const fileInputClientes = document.getElementById("file-input");
   if (fileInputClientes) {
     fileInputClientes.addEventListener("change", (e) =>
-      importarPlanilha(e, "/clientes/importar-planilha"),
+      importarPlanilha(e, "/pedidos/importar-planilha"),
     );
   }
 
   const fileInputPedidos = document.getElementById("file-input-pedidos");
   if (fileInputPedidos) {
-    fileInputPedidos.addEventListener("change", (e) =>
-      importarPlanilha(e, "/pedidos/importar-planilha"),
-    );
+    fileInputPedidos.style.display = "none";
   }
 
   const formEditarCliente = document.getElementById("form-editar-cliente");
@@ -147,12 +144,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (nextBtn)
     nextBtn.addEventListener("click", () => {
-
-      console.log("ANTES", paginaAtualPedidos);
-
-      const totalPaginas = Math.ceil(
-        totalClientesBanco / clientesPorPagina
-      );
+      const totalPaginas = Math.ceil(totalClientesBanco / clientesPorPagina);
 
       if (paginaAtualClientes < totalPaginas) {
         paginaAtualClientes++;
@@ -163,20 +155,16 @@ document.addEventListener("DOMContentLoaded", () => {
   const prevBtnPed = document.getElementById("prev-page-pedidos");
   const nextBtnPed = document.getElementById("next-page-pedidos");
 
-
   if (prevBtnPed)
     prevBtnPed.addEventListener("click", () => {
       if (paginaAtualPedidos > 1) {
         paginaAtualPedidos--;
-        console.log("DEPOIS", paginaAtualPedidos);
         carregarPedidos();
       }
     });
   if (nextBtnPed)
     nextBtnPed.addEventListener("click", () => {
-      const totalPaginas = Math.ceil(
-        totalPedidosBanco / pedidosPorPagina
-      );
+      const totalPaginas = Math.ceil(totalPedidosBanco / pedidosPorPagina);
 
       if (paginaAtualPedidos < totalPaginas) {
         paginaAtualPedidos++;
@@ -184,7 +172,6 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
 
-  // --- OUVINTE PARA MUDANÇA DE EVENTO NO FILTRO DE PEDIDOS ---
   const selectFiltroPedidos = document.getElementById("filtro-pedidos-evento");
   if (selectFiltroPedidos) {
     selectFiltroPedidos.addEventListener("change", (e) => {
@@ -207,50 +194,34 @@ document.addEventListener("DOMContentLoaded", () => {
   carregarEventos();
 });
 
-
-
 async function importarPlanilha(
   event,
   endpoint,
   tituloModal = "Processando Planilha",
 ) {
   const arquivo = event.target.files[0];
-  if (!arquivo) {
-    console.warn("[Importação] Nenhum arquivo foi selecionado.");
-    return;
-  }
+  if (!arquivo) return;
 
   if (!idEventoAtual) {
-    console.error(
-      "[Importação] Erro: Tentativa de importação sem idEventoAtual definido.",
-    );
     alert("Selecione um evento antes de importar!");
     event.target.value = "";
     return;
   }
 
-  console.log(
-    `[Importação] Iniciando processo. Arquivo: ${arquivo.name}, Tamanho: ${arquivo.size} bytes, Evento ID: ${idEventoAtual}`,
-  );
-
   exibirModalProgresso(tituloModal);
-  atualizarModalProgresso(0, "Iniciando upload...");
+  atualizarModalProgresso(0, "Iniciando leitura e upload do arquivo...");
 
   let porcentagemSimulada = 0;
-  console.log(
-    "[Importação] Iniciando temporizador de progresso visual (1% por segundo).",
-  );
 
   intervaloProgressoImportacao = setInterval(() => {
     if (porcentagemSimulada < 95) {
       porcentagemSimulada += 1;
       atualizarModalProgresso(
         porcentagemSimulada,
-        `Processando planilha... ${porcentagemSimulada}%`,
+        `Processando dados no banco de dados... (${porcentagemSimulada}%)`,
       );
-      console.log(`[Importação - Progresso Ativo] ${porcentagemSimulada}%`);
     }
-  }, 1000);
+  }, 1000); // 1% a cada 1 segundo
 
   const xhr = new XMLHttpRequest();
   xhrImportacaoAtual = xhr;
@@ -259,51 +230,52 @@ async function importarPlanilha(
   formData.append("file", arquivo);
   formData.append("evento_id", idEventoAtual);
 
-  const urlFinal = `${API_URL}${endpoint}`;
-  console.log(`[Importação] Enviando requisição POST para: ${urlFinal}`);
-
-  xhr.open("POST", urlFinal);
+  xhr.open("POST", `${API_URL}${endpoint}`);
 
   xhr.onload = () => {
     clearInterval(intervaloProgressoImportacao);
     xhrImportacaoAtual = null;
-    console.log(`[Importação] Servidor respondeu com Status: ${xhr.status}`);
 
     if (xhr.status >= 200 && xhr.status < 300) {
       try {
         const resultado = JSON.parse(xhr.responseText);
-        console.log(
-          "[Importação] Resposta do servidor decodificada com sucesso:",
-          resultado,
-        );
 
-        console.log(
-          "[Importação] Forçando progresso visual para 100% (Concluído).",
-        );
-        atualizarModalProgresso(100, "Processamento concluído!");
+        const txtPorcentagem = document.getElementById("porcentagem-progresso");
+        const btnCancelar = document.getElementById("btn-cancelar-importacao");
+        const spinner = document.getElementById("loading-spinner");
+        const txtTitulo = document.getElementById("titulo-progresso");
+
+        if (txtPorcentagem) txtPorcentagem.style.display = "none";
+        if (btnCancelar) btnCancelar.style.display = "none";
+        if (spinner) spinner.style.display = "none";
+        if (txtTitulo) txtTitulo.style.display = "none";
+
+        const statusProgresso = document.getElementById("status-progresso");
+        if (statusProgresso) {
+          statusProgresso.innerHTML = `
+            <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 25px 0;">
+              <i data-lucide="check-circle" style="width: 64px; height: 64px; color: #10b981;"></i>
+              <span style="font-size: 1.4rem; font-weight: 700; color: #10b981;">Importação Concluída!</span>
+              <span style="font-size: 0.95rem; opacity: 0.8; text-align: center; margin-top: 4px; color: #666;">
+                ${resultado.total_clientes_novos} novos clientes e ${resultado.total_pedidos_criados} pedidos integrados.
+              </span>
+            </div>
+          `;
+          lucide.createIcons();
+        }
+
+        carregarClientes(idEventoAtual);
+        carregarPedidos(idEventoAtual);
 
         setTimeout(() => {
           fecharModalProgresso();
-
-          alert(
-            `Sucesso! ${resultado.total_clientes_novos} novos clientes e ${resultado.total_pedidos_criados} pedidos.`,
-          );
-
-          console.log(
-            "[Importação] Atualizando tabelas de clientes e pedidos na interface...",
-          );
-          carregarClientes(idEventoAtual);
-          carregarPedidos(idEventoAtual);
-        }, 500);
+        }, 2500);
       } catch (e) {
-        console.error("[Importação] Erro ao tentar ler o JSON de resposta:", e);
+        console.error("Erro ao ler JSON de resposta:", e);
         fecharModalProgresso();
         alert("Erro ao interpretar resposta do servidor.");
       }
     } else {
-      console.error(
-        `[Importação] O servidor retornou um erro estrutural. Status: ${xhr.status}, Resposta: ${xhr.responseText}`,
-      );
       fecharModalProgresso();
       alert("Erro no servidor ao processar arquivo.");
     }
@@ -312,15 +284,8 @@ async function importarPlanilha(
   xhr.onerror = () => {
     clearInterval(intervaloProgressoImportacao);
     xhrImportacaoAtual = null;
-    console.error(
-      "[Importação] Falha crítica de rede (XHR onerror disparado).",
-    );
     fecharModalProgresso();
     alert("Erro de rede ao enviar arquivo.");
-  };
-
-  xhr.onabort = () => {
-    console.log("[Importação] Requisição cancelada com sucesso no cliente.");
   };
 
   xhr.send(formData);
@@ -329,26 +294,28 @@ async function importarPlanilha(
 
 function cancelarImportacao() {
   if (xhrImportacaoAtual) {
-    console.log(
-      "[Importação] Cancelamento solicitado pelo usuário. Abortando XHR...",
-    );
     xhrImportacaoAtual.abort();
     xhrImportacaoAtual = null;
   }
-
   if (intervaloProgressoImportacao) {
     clearInterval(intervaloProgressoImportacao);
     intervaloProgressoImportacao = null;
   }
-
   fecharModalProgresso();
 
   const fClientes = document.getElementById("file-input");
-  const fPedidos = document.getElementById("file-input-pedidos");
   if (fClientes) fClientes.value = "";
-  if (fPedidos) fPedidos.value = "";
 
   alert("Importação cancelada. Nenhuma alteração foi salva no banco.");
+}
+
+function resetarBotaoCancelar() {
+  const btnCancelar = document.getElementById("btn-cancelar-importacao");
+  if (btnCancelar) {
+    btnCancelar.textContent = "Cancelar Importação";
+    btnCancelar.style.backgroundColor = "#ef4444";
+    btnCancelar.onclick = cancelarImportacao;
+  }
 }
 
 function exibirModalProgresso(titulo) {
@@ -368,8 +335,34 @@ function fecharModalProgresso() {
   document.getElementById("modal-progresso-importacao").style.display = "none";
 
   const text = document.getElementById("porcentagem-progresso");
-  if (text) text.textContent = "0%";
+  if (text) {
+    text.textContent = "0%";
+    text.style.display = "";
+  }
+
+  const btnCancelar = document.getElementById("btn-cancelar-importacao");
+  if (btnCancelar) {
+    btnCancelar.style.display = "";
+    resetarBotaoCancelar();
+  }
+
+  const spinner = document.getElementById("loading-spinner");
+  if (spinner) {
+    spinner.style.display = "";
+  }
+
+  const txtTitulo = document.getElementById("titulo-progresso");
+  if (txtTitulo) {
+    txtTitulo.style.display = "";
+  }
+
+  const status = document.getElementById("status-progresso");
+  if (status) {
+    status.innerHTML = "Lendo os dados do arquivo, por favor aguarde...";
+  }
 }
+
+// --- FUNÇÕES DE RENDERIZAÇÃO DAS TABELAS ---
 
 async function carregarClientes(eventoId = null) {
   if (eventoId !== null) {
@@ -389,20 +382,17 @@ async function carregarClientes(eventoId = null) {
       : `${API_URL}/clientes/listar`;
 
     const response = await fetch(url);
-
     if (!response.ok)
       throw new Error(`Erro na requisição: Status ${response.status}`);
 
     const textoResposta = await response.text();
-    let dadosBrutos;
+    let dadosBrutos = textoResposta.trim() ? JSON.parse(textoResposta) : [];
 
-    if (!textoResposta.trim()) {
-      dadosBrutos = [];
-    } else {
-      dadosBrutos = JSON.parse(textoResposta);
-    }
-
-    if (dadosBrutos && typeof dadosBrutos === "object" && !Array.isArray(dadosBrutos)) {
+    if (
+      dadosBrutos &&
+      typeof dadosBrutos === "object" &&
+      !Array.isArray(dadosBrutos)
+    ) {
       totalClientesBanco = dadosBrutos.total || 0;
       clientes = dadosBrutos.clientes || [];
     } else {
@@ -418,17 +408,9 @@ async function carregarClientes(eventoId = null) {
 
     mostrarPaginaClientes();
   } catch (error) {
-    console.error("Erro detalhado no processamento de clientes:", error);
-
+    console.error("Erro no processamento de clientes:", error);
     if (tabela) {
-      tabela.innerHTML = `
-        <tr>
-          <td colspan='7' style='text-align:center; color: #ff4d4d; padding: 20px;'>
-            <strong>Erro ao processar dados do servidor.</strong><br>
-            <small style="opacity:0.8; font-family: monospace;">Detalhe: ${error.message}</small>
-          </td>
-        </tr>
-      `;
+      tabela.innerHTML = `<tr><td colspan='7' style='text-align:center; color: #ff4d4d; padding: 20px;'><strong>Erro ao processar dados do servidor.</strong></td></tr>`;
     }
   }
 }
@@ -455,8 +437,8 @@ function mostrarPaginaClientes() {
   clientes.forEach((cliente) => {
     const dataNasc = cliente.data_nascimento
       ? new Date(cliente.data_nascimento).toLocaleDateString("pt-BR", {
-        timeZone: "UTC",
-      })
+          timeZone: "UTC",
+        })
       : "---";
     const clienteJson = JSON.stringify(cliente).replace(/"/g, "&quot;");
 
@@ -484,18 +466,17 @@ function mostrarPaginaClientes() {
     document.getElementById("current-page").textContent = paginaAtualClientes;
   if (document.getElementById("total-pages"))
     document.getElementById("total-pages").textContent = totalPaginas;
-
-  // Bloqueia ou libera os botões de Avançar e Voltar baseado na página correta
   if (document.getElementById("prev-page"))
     document.getElementById("prev-page").disabled = paginaAtualClientes === 1;
   if (document.getElementById("next-page"))
-    document.getElementById("next-page").disabled = paginaAtualClientes === totalPaginas;
+    document.getElementById("next-page").disabled =
+      paginaAtualClientes === totalPaginas;
 
   lucide.createIcons();
 }
 
 function proximaPaginaClientes() {
-  const totalPaginas = Math.ceil(window.totalClientesBanco / clientesPorPagina) || 1;
+  const totalPaginas = Math.ceil(totalClientesBanco / clientesPorPagina) || 1;
   if (paginaAtualClientes < totalPaginas) {
     paginaAtualClientes++;
     carregarClientes();
@@ -509,7 +490,7 @@ function paginaAnteriorClientes() {
   }
 }
 
-async function verClientesDoEvento(idEvento, nomeEvento) {
+async function verClientesDoEvento(idEvento, nomeEvento, botao) {
   const titulo = document.getElementById("titulo-clientes-evento");
   const subtitulo = document.getElementById("subtitulo-clientes-evento");
 
@@ -517,8 +498,25 @@ async function verClientesDoEvento(idEvento, nomeEvento) {
   if (subtitulo)
     subtitulo.innerText = `Gerenciando participantes do evento #${idEvento}`;
 
-  await carregarClientes(idEvento);
-  trocarPagina("clientes");
+  let txtOriginal = "";
+  if (botao) {
+    botao.disabled = true;
+    txtOriginal = botao.innerHTML;
+    botao.innerHTML = "<span class='spinner-btn'></span> Buscando...";
+  }
+
+  try {
+    await carregarClientes(idEvento);
+    trocarPagina("clientes");
+  } catch (error) {
+    console.error("Erro na transição de página dos participantes:", error);
+  } finally {
+    if (botao) {
+      botao.disabled = false;
+      botao.innerHTML = txtOriginal;
+      lucide.createIcons();
+    }
+  }
 }
 
 function abrirModalEditar(cliente) {
@@ -542,12 +540,7 @@ async function carregarCategorias() {
     const selectCategoria = document.getElementById("evento-categoria");
     if (!selectCategoria) return;
 
-    selectCategoria.innerHTML = `
-        <option value="" disabled selected hidden>
-          Selecione uma categoria
-        </option>
-      `;
-
+    selectCategoria.innerHTML = `<option value="" disabled selected hidden>Selecione uma categoria</option>`;
     categorias.forEach((cat) => {
       selectCategoria.innerHTML += `<option value="${cat.id}">${cat.nome}</option>`;
     });
@@ -564,9 +557,7 @@ async function carregarEventos() {
   }
 
   try {
-    if (categorias.length === 0) {
-      await carregarCategorias();
-    }
+    if (categorias.length === 0) await carregarCategorias();
 
     const response = await fetch(`${API_URL}/eventos/listar`);
     if (!response.ok) return;
@@ -589,42 +580,29 @@ async function carregarEventos() {
           hour: "2-digit",
           minute: "2-digit",
         });
-
       const tagImagem = evento.imagem
         ? `<img src="${evento.imagem}" alt="${evento.nome}">`
         : "";
       const classeNoImage = evento.imagem ? "" : "no-image";
-
       const objCategoria = categorias.find((c) => c.id === evento.categoria_id);
       const nomeCategoria = objCategoria
         ? objCategoria.nome
         : `ID: ${evento.categoria_id}`;
 
-      // --- AJUSTE AQUI: Adicionado o 'this' no final do onclick ---
       gridContainer.innerHTML += `
         <div class="event-card">
           <div class="event-card-banner ${classeNoImage}">
             ${tagImagem}
             <span class="event-card-category">${nomeCategoria}</span>
             <div class="event-card-actions">
-              <button class="btn-edit-table" onclick="prepararEdicaoEvento(${evento.id})" title="Editar">
-                <i data-lucide="pencil" style="width: 16px;"></i>
-              </button>
-              <button class="btn-edit-table btn-delete-table" onclick="deletarEvento(${evento.id})" title="Excluir">
-                <i data-lucide="trash-2" style="width: 16px;"></i>
-              </button>
+              <button class="btn-edit-table" onclick="prepararEdicaoEvento(${evento.id})" title="Editar"><i data-lucide="pencil" style="width: 16px;"></i></button>
+              <button class="btn-edit-table btn-delete-table" onclick="deletarEvento(${evento.id})" title="Excluir"><i data-lucide="trash-2" style="width: 16px;"></i></button>
             </div>
           </div>
           <div class="event-card-body">
             <h3 class="event-card-title">${evento.nome}</h3>
-            <div class="event-card-info-item">
-              <i data-lucide="calendar"></i>
-              <span>${dataFormatada}</span>
-            </div>
-            <div class="event-card-info-item">
-              <i data-lucide="map-pin"></i>
-              <span>${evento.local}</span>
-            </div>
+            <div class="event-card-info-item"><i data-lucide="calendar"></i><span>${dataFormatada}</span></div>
+            <div class="event-card-info-item"><i data-lucide="map-pin"></i><span>${evento.local}</span></div>
             <div class="event-card-footer" style="display: flex; flex-direction: column; gap: 12px; align-items: stretch;">
               <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
@@ -632,10 +610,8 @@ async function carregarEventos() {
                   <div class="event-card-price-value">R$ ${evento.valor_passagem.toFixed(2).replace(".", ",")}</div>
                 </div>
               </div>
-              
               <button class="btn-import" onclick="verClientesDoEvento(${evento.id}, '${evento.nome.replace(/'/g, "\\'")}', this)" style="width: 100%; justify-content: center; margin: 0; padding: 10px;">
-                <i data-lucide="users" style="width: 16px; height: 16px;"></i>
-                Ver Participantes
+                <i data-lucide="users" style="width: 16px; height: 16px;"></i>Ver Participantes
               </button>
             </div>
           </div>
@@ -648,39 +624,6 @@ async function carregarEventos() {
   }
 }
 
-// --- AJUSTE AQUI: Nova verClientesDoEvento controlando o estado do botão ---
-async function verClientesDoEvento(idEvento, nomeEvento, botao) {
-  const titulo = document.getElementById("titulo-clientes-evento");
-  const subtitulo = document.getElementById("subtitulo-clientes-evento");
-
-  if (titulo) titulo.innerText = `Clientes: ${nomeEvento}`;
-  if (subtitulo)
-    subtitulo.innerText = `Gerenciando participantes do evento #${idEvento}`;
-
-  let txtOriginal = "";
-  if (botao) {
-    botao.disabled = true;
-    txtOriginal = botao.innerHTML;
-    botao.innerHTML = "<span class='spinner-btn'></span> Buscando...";
-  }
-
-  try {
-    // Aguarda a busca de dados terminar
-    await carregarClientes(idEvento);
-    // Só muda de página se a busca não disparar uma exceção grave
-    trocarPagina("clientes");
-  } catch (error) {
-    console.error("Erro na transição de página dos participantes:", error);
-  } finally {
-    // Restaura o estado original do botão após terminar tudo
-    if (botao) {
-      botao.disabled = false;
-      botao.innerHTML = txtOriginal;
-      lucide.createIcons(); // Recria o ícone do bonequinho de usuários
-    }
-  }
-}
-
 async function fazerUploadImagem(input) {
   const file = input.files[0];
   if (!file) return;
@@ -689,13 +632,12 @@ async function fazerUploadImagem(input) {
   const btnSalvar = formEvento
     ? formEvento.querySelector('button[type="submit"]')
     : null;
-
   const statusLabel = document.getElementById("upload-status");
+
   if (statusLabel) {
     statusLabel.style.color = "var(--text-dim)";
     statusLabel.innerText = "Enviando para o Supabase...";
   }
-
   if (btnSalvar) {
     btnSalvar.disabled = true;
     btnSalvar.style.opacity = "0.5";
@@ -740,7 +682,6 @@ async function fazerUploadImagem(input) {
 async function prepararEdicaoEvento(id) {
   try {
     await carregarCategorias();
-
     const response = await fetch(`${API_URL}/eventos/consultar/${id}`);
     if (!response.ok) return;
     const evento = await response.json();
@@ -764,7 +705,6 @@ async function prepararEdicaoEvento(id) {
       btnSalvar.disabled = false;
       btnSalvar.style.opacity = "1";
     }
-
     document.getElementById("modal-evento").style.display = "flex";
   } catch (error) {
     console.error(error);
@@ -799,7 +739,6 @@ async function abrirModalEvento() {
   }
 
   await carregarCategorias();
-
   document.getElementById("modal-evento-titulo").innerText = "Cadastrar Evento";
   document.getElementById("modal-evento").style.display = "flex";
 }
@@ -808,7 +747,6 @@ function fecharModalEvento() {
   document.getElementById("modal-evento").style.display = "none";
 }
 
-// --- FUNÇÃO PARA POPULAR O SELECT DE FILTRO DE EVENTOS (OTIMIZADA) ---
 async function popularFiltroEventosPedidos(idSelecionado) {
   const selectFiltro = document.getElementById("filtro-pedidos-evento");
   if (!selectFiltro) return;
@@ -824,7 +762,6 @@ async function popularFiltroEventosPedidos(idSelecionado) {
     const eventos = await response.json();
 
     selectFiltro.innerHTML = "";
-
     if (eventos.length === 0) {
       selectFiltro.innerHTML = `<option value="">Nenhum evento cadastrado</option>`;
       return;
@@ -833,26 +770,22 @@ async function popularFiltroEventosPedidos(idSelecionado) {
     eventos.forEach((ev) => {
       selectFiltro.innerHTML += `<option value="${ev.id}">${ev.nome}</option>`;
     });
-
     selectFiltro.value = idSelecionado;
   } catch (error) {
     console.error("Erro ao popular filtro de eventos em pedidos:", error);
   }
 }
 
-// --- AJUSTE: CARREGAR PEDIDOS FILTRADOS POR EVENTO ---
 async function carregarPedidos(eventoId = null) {
   if (eventoId !== null && eventoId !== idEventoAtual) {
     idEventoAtual = eventoId;
     paginaAtualPedidos = 1;
   }
 
-  // Exibe o feedback visual de loading na tabela imediatamente ao chamar a função
   exibirMensagemTabelaPedidos(
     "<span class='spinner-inline'></span> Buscando pedidos atualizados...",
   );
 
-  // Fallback: se não houver evento em memória, busca o primeiro cadastrado
   if (!idEventoAtual) {
     try {
       const resEventos = await fetch(`${API_URL}/eventos/listar`);
@@ -874,15 +807,13 @@ async function carregarPedidos(eventoId = null) {
     }
   }
 
-  // Sincroniza o select visual se ele existir na tela
   await popularFiltroEventosPedidos(idEventoAtual);
 
   try {
     const response = await fetch(
-      `${API_URL}/pedidos/evento/${idEventoAtual}?pagina=${paginaAtualPedidos}&limite=${pedidosPorPagina}`
+      `${API_URL}/pedidos/evento/${idEventoAtual}?pagina=${paginaAtualPedidos}&limite=${pedidosPorPagina}`,
     );
 
-    // Tratamento estruturado do status 404 (Sem registros de pedidos)
     if (response.status === 404) {
       pedidos = [];
       paginaAtualPedidos = 1;
@@ -891,7 +822,6 @@ async function carregarPedidos(eventoId = null) {
     }
 
     if (!response.ok) throw new Error();
-
     const dados = await response.json();
 
     pedidos = dados.pedidos || [];
@@ -919,13 +849,8 @@ function mostrarPaginaPedidos() {
   tabela.innerHTML = "";
 
   if (pedidos.length === 0) {
-    tabela.innerHTML = `
-        <tr>
-          <td colspan='12' style='text-align:center; opacity: 0.6; padding: 20px;'>
-            Nenhum pedido encontrado para este evento.
-          </td>
-        </tr>
-      `;
+    tabela.innerHTML =
+      "<tr><td colspan='12' style='text-align:center; opacity: 0.6; padding: 20px;'>Nenhum pedido encontrado para este evento.</td></tr>";
     if (document.getElementById("current-page-pedidos"))
       document.getElementById("current-page-pedidos").textContent = 1;
     if (document.getElementById("total-pages-pedidos"))
@@ -937,9 +862,7 @@ function mostrarPaginaPedidos() {
     return;
   }
 
-  const totalPaginas =
-    Math.ceil(totalPedidosBanco / pedidosPorPagina) || 1;
-
+  const totalPaginas = Math.ceil(totalPedidosBanco / pedidosPorPagina) || 1;
   if (paginaAtualPedidos > totalPaginas) paginaAtualPedidos = totalPaginas;
   if (paginaAtualPedidos < 1) paginaAtualPedidos = 1;
 
@@ -949,11 +872,10 @@ function mostrarPaginaPedidos() {
       : "---";
     const valorLote = pedido.valor_lote
       ? parseFloat(pedido.valor_lote).toLocaleString("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-      })
+          style: "currency",
+          currency: "BRL",
+        })
       : "R$ 0,00";
-
     const transferido = pedido.transferido ? "Sim" : "Não";
     const aprovado = pedido.aprovado ? "Sim" : "Não";
 
@@ -983,7 +905,6 @@ function mostrarPaginaPedidos() {
 
   const prevBtnPed = document.getElementById("prev-page-pedidos");
   const nextBtnPed = document.getElementById("next-page-pedidos");
-  console.log("BOTAO PEDIDOS:", nextBtnPed);
 
   if (prevBtnPed) prevBtnPed.disabled = paginaAtualPedidos === 1;
   if (nextBtnPed) nextBtnPed.disabled = paginaAtualPedidos >= totalPaginas;
