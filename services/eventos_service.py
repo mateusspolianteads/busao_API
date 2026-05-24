@@ -1,5 +1,6 @@
 from fastapi import HTTPException
 from models.evento import Evento
+from services.crm_service import processar_novo_evento
 
 
 def criar_evento(db, dados):
@@ -16,6 +17,7 @@ def criar_evento(db, dados):
     db.add(novo_evento)
     db.commit()
     db.refresh(novo_evento)
+    processar_novo_evento(db, novo_evento)
 
     return novo_evento
 
