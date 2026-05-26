@@ -165,8 +165,8 @@ body {
 @media (max-width: 480px) {
   body {
     padding: 16px;
-    align-items: flex-start;
-    padding-top: 48px;
+    /* Aqui o align-items: center continuará sendo herdado do body principal,
+       mantendo o card sempre no meio da tela */
   }
 
   .auth-container {

@@ -1,6 +1,15 @@
 from fastapi import FastAPI
 from database import Base, engine
-from routes import usuarios, clientes, eventos, pedidos, categorias, upload, importacao_route
+from routes import (
+    usuarios,
+    clientes,
+    eventos,
+    pedidos,
+    categorias,
+    upload,
+    importacao_route
+)
+
 from fastapi.middleware.cors import CORSMiddleware
 
 from models.usuario import Usuario
@@ -14,21 +23,22 @@ app = FastAPI(
     version="1.0.0"
 )
 
+# CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5500",
-        "http://127.0.0.1:5500",
-        "http://localhost:64444",
-        "http://127.0.0.1:64444"
-    ],
+
+    # libera localhost e qualquer porta do Flutter Web
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
+
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
+# Cria tabelas
 Base.metadata.create_all(bind=engine)
 
+# Rotas
 app.include_router(usuarios.router)
 app.include_router(clientes.router)
 app.include_router(eventos.router)
@@ -37,12 +47,17 @@ app.include_router(categorias.router)
 app.include_router(upload.router)
 app.include_router(importacao_route.router)
 
+# Home
 @app.get("/")
 def home():
-    return {"mensagem": "API Busão do Rolê funcionando"}
+    return {
+        "mensagem": "API Busão do Rolê funcionando"
+    }
 
+# Rodar API
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
