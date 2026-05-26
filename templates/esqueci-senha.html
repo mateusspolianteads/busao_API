@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Esqueceu a Senha</title>
+  <link rel="stylesheet" href="../static/css/esqueci-senha.css">
+  <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body>
+
+  <div class="auth-container">
+    <div class="auth-header">
+      <a href="login.html" class="btn-back">
+        <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i>
+        Voltar para o login
+      </a>
+      <h1>Esqueceu a senha?</h1>
+      <p>Digite o e-mail cadastrado na sua conta para receber as instruções de recuperação.</p>
+    </div>
+
+    <form>
+      <div class="form-group">
+        <label for="email">E-mail da conta</label>
+        <div class="input-wrapper">
+          <i data-lucide="mail" style="width: 20px; height: 20px;"></i>
+          <input type="email" id="email" placeholder="seu@email.com" required autocomplete="email">
+        </div>
+      </div>
+
+      <button type="submit" class="btn-submit">
+        Continuar
+      </button>
+    </form>
+  </div>
+
+  <script>
+    lucide.createIcons();
+  </script>
+  <script src="../static/javascript/esqueci-senha.js"></script>
+</body>
+</html>

@@ -20,11 +20,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 const resultado = await response.json();
 
                 if (response.ok) {
-                    alert("Sucesso: " + (resultado.mensagem || "Operação realizada!"));
-                    window.location.href = "home.html"; 
+
+                    localStorage.setItem("access_token", resultado.access_token);
+                    localStorage.setItem("refresh_token", resultado.refresh_token);
+
+                    alert("Login realizado com sucesso!");
+
+                    window.location.href = "home.html";
+
                 } else {
                     alert("Atenção: " + (resultado.detail || "Erro ao processar dados"));
                 }
+
             } catch (error) {
                 console.error("Erro na requisição:", error);
                 alert("Servidor Offline. Verifique se o Python está rodando.");
