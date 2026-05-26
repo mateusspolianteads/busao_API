@@ -174,11 +174,6 @@
           </div>
 
           <div class="header-actions">
-            <!-- <button class="btn-import" onclick="document.getElementById('file-input-pedidos').click()">
-              <i data-lucide="file-spreadsheet"></i>
-              Importar Planilha
-            </button>
-            <input type="file" id="file-input-pedidos" accept=".xlsx, .xls, .csv" style="display: none" / -->
           </div>
         </header>
 
@@ -259,7 +254,7 @@
           </div>
         </header>
 
-        <section class="recent-sales">
+        <section class="recent-sales" style="display: flex; flex-direction: column; gap: 20px;">
           <div class="card" style="
                 display: flex;
                 justify-content: space-between;
@@ -273,6 +268,19 @@
             </div>
             <button id="theme-toggle" class="btn-theme">
               <i data-lucide="moon" id="theme-icon"></i>
+            </button>
+          </div>
+
+          <div class="card card-logout border-logout">
+            <div>
+              <h3>Sair do Sistema</h3>
+              <p style="color: var(--text-dim); margin-top: 5px">
+                Encerrar sua sessão de administrador com segurança
+              </p>
+            </div>
+            <button class="btn-logout-trigger" onclick="abrirModalLogout()">
+              <i data-lucide="log-out"></i>
+              Sair da Conta
             </button>
           </div>
         </section>
@@ -422,6 +430,26 @@
         onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'">
         Cancelar Importação
       </button>
+    </div>
+  </div>
+
+  <div id="modal-logout" class="modal-overlay" style="display: none">
+    <div class="modal-content" style="max-width: 420px; text-align: center;">
+      <div class="modal-header" style="justify-content: center; margin-bottom: 12px;">
+        <h2 style="color: #ff4d4d; display: flex; align-items: center; gap: 10px; font-size: 1.4rem;">
+          <i data-lucide="alert-triangle" style="stroke-width: 2.5px;"></i> Atenção
+        </h2>
+      </div>
+      
+      <p style="color: var(--text-main); font-size: 0.95rem; margin-bottom: 24px; line-height: 1.5;">
+        Você realmente deseja sair da sua conta? <br>
+        <span style="color: var(--text-dim); font-size: 0.8rem;">Sua sessão atual baseada em token JWT será finalizada.</span>
+      </p>
+
+      <div class="modal-actions" style="margin-top: 15px; display: flex; gap: 12px;">
+        <button type="button" class="btn-cancel" style="flex: 1;" onclick="fecharModalLogout()">Cancelar</button>
+        <button type="button" class="btn-delete-confirm" style="flex: 1.8;" onclick="confirmarLogout()">Sair da Conta</button>
+      </div>
     </div>
   </div>
 

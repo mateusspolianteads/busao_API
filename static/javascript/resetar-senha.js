@@ -1,73 +1,43 @@
 document.addEventListener("DOMContentLoaded", () => {
+    const form = document.querySelector("form");
+    const senhaInput = document.getElementById("senha");
+    const confirmarSenhaInput = document.getElementById("confirmar-senha");
+    const button = document.querySelector(".btn-submit");
 
-    const form = document.querySelector("form")
+    if(form) {
+        form.addEventListener("submit", async (e) => {
+            e.preventDefault();
 
-    const senhaInput = document.getElementById("senha")
-    const confirmarSenhaInput = document.getElementById("confirmar-senha")
+            const senha = senhaInput.value.trim();
+            const confirmarSenha = confirmarSenhaInput.value.trim();
+            const token = new URLSearchParams(window.location.search).get("token");
 
-    const button = document.querySelector(".btn-submit")
+            if (!token) {
+                mostrarMensagem("Token inválido ou expirado", "erro");
+                return;
+            }
 
-    form.addEventListener("submit", async (e) => {
+            if (!senha || !confirmarSenha) {
+                mostrarMensagem("Preencha todos os campos", "erro");
+                return;
+            }
 
-        e.preventDefault()
+            if (senha.length < 6) {
+                mostrarMensagem("A senha deve ter no mínimo 6 caracteres", "erro");
+                return;
+            }
 
-        const senha = senhaInput.value.trim()
-        const confirmarSenha = confirmarSenhaInput.value.trim()
+            if (senha !== confirmarSenha) {
+                mostrarMensagem("As senhas não coincidem", "erro");
+                return;
+            }
 
-        const token = new URLSearchParams(
-            window.location.search
-        ).get("token")
+            const textoOriginal = button.textContent;
+            button.disabled = true;
+            button.textContent = "Redefinindo...";
 
-        if (!token) {
-
-            mostrarMensagem(
-                "Token inválido ou expirado",
-                "erro"
-            )
-
-            return
-        }
-
-        if (!senha || !confirmarSenha) {
-
-            mostrarMensagem(
-                "Preencha todos os campos",
-                "erro"
-            )
-
-            return
-        }
-
-        if (senha.length < 6) {
-
-            mostrarMensagem(
-                "A senha deve ter no mínimo 6 caracteres",
-                "erro"
-            )
-
-            return
-        }
-
-        if (senha !== confirmarSenha) {
-
-            mostrarMensagem(
-                "As senhas não coincidem",
-                "erro"
-            )
-
-            return
-        }
-
-        const textoOriginal = button.textContent
-
-        button.disabled = true
-        button.textContent = "Redefinindo..."
-
-        try {
-
-            const response = await fetch(
-                "http://127.0.0.1:8000/usuarios/resetar-senha",
-                {
+            try {
+                const response = await fetch("http://127.0.0.1:8000/usuarios/resetar-senha", {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
@@ -76,78 +46,58 @@ document.addEventListener("DOMContentLoaded", () => {
                         token,
                         nova_senha: senha
                     })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // AQUI ESTÁ A MÁGICA: Substitui o conteúdo do formulário pela mensagem de sucesso!
+                    const container = document.querySelector(".auth-container");
+                    
+                    container.innerHTML = `
+                        <div style="text-align: center; padding: 20px 0;">
+                            <i data-lucide="check-circle" style="color: #2ecc71; width: 64px; height: 64px; margin-bottom: 24px; display: inline-block;"></i>
+                            <h1 style="font-size: 24px; font-weight: 800; margin-bottom: 12px; color: #ffffff; letter-spacing: -0.5px;">Senha redefinida com sucesso</h1>
+                            <p style="color: var(--text-dim); font-size: 15px; line-height: 1.5;">Você já pode fechar esta página e fazer login novamente no aplicativo.</p>
+                        </div>
+                    `;
+                    
+                    // Renderiza o novo ícone de "check" que colocamos no HTML acima
+                    lucide.createIcons();
+                    
+                } else {
+                    mostrarMensagem(data.detail || "Erro ao redefinir senha", "erro");
+                    button.disabled = false;
+                    button.textContent = textoOriginal;
                 }
-            )
 
-            const data = await response.json()
-
-            if (response.ok) {
-
-                mostrarMensagem(
-                    "Senha redefinida com sucesso!",
-                    "sucesso"
-                )
-
-                form.reset()
-
-                setTimeout(() => {
-
-                    window.location.href = "login.html"
-
-                }, 2000)
-
-            } else {
-
-                mostrarMensagem(
-                    data.detail || "Erro ao redefinir senha",
-                    "erro"
-                )
-
+            } catch (error) {
+                console.error(error);
+                mostrarMensagem("Servidor offline ou erro de conexão", "erro");
+                button.disabled = false;
+                button.textContent = textoOriginal;
             }
-
-        } catch (error) {
-
-            console.error(error)
-
-            mostrarMensagem(
-                "Servidor offline ou erro de conexão",
-                "erro"
-            )
-
-        } finally {
-
-            button.disabled = false
-            button.textContent = textoOriginal
-
-        }
-
-    })
-
-})
+        });
+    }
+});
 
 function mostrarMensagem(texto, tipo) {
-
-    const mensagemExistente = document.querySelector(".alert-message")
+    const mensagemExistente = document.querySelector(".alert-message");
 
     if (mensagemExistente) {
-        mensagemExistente.remove()
+        mensagemExistente.remove();
     }
 
-    const div = document.createElement("div")
+    const div = document.createElement("div");
+    div.classList.add("alert-message");
+    div.classList.add(tipo);
+    div.innerText = texto;
 
-    div.classList.add("alert-message")
-    div.classList.add(tipo)
-
-    div.innerText = texto
-
-    document
-        .querySelector(".auth-container")
-        .appendChild(div)
+    document.querySelector(".auth-container").appendChild(div);
 
     setTimeout(() => {
-
-        div.remove()
-
-    }, 5000)
-
+        if(document.body.contains(div)) {
+            div.remove();
+        }
+    }, 5000);
 }

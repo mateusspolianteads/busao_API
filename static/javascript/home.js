@@ -62,7 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         if (!response.ok) throw new Error();
-        alert("Cliente atualizado com sucesso!");
+        alert("Cliente updated com sucesso!");
         fecharModalEditar();
         carregarClientes();
       } catch (error) {
@@ -221,7 +221,7 @@ async function importarPlanilha(
         `Processando dados no banco de dados... (${porcentagemSimulada}%)`,
       );
     }
-  }, 1000); // 1% a cada 1 segundo
+  }, 1000);
 
   const xhr = new XMLHttpRequest();
   xhrImportacaoAtual = xhr;
@@ -837,19 +837,19 @@ async function carregarPedidos(eventoId = null) {
 }
 
 function exibirMensagemTabelaPedidos(mensagem, cor = "var(--text-dim)") {
-  const tabela = document.getElementById("tabela-pedidos-body");
-  if (tabela) {
-    tabela.innerHTML = `<tr><td colspan='12' style='text-align:center; padding: 30px; color: ${cor};'>${mensagem}</td></tr>`;
+  const table = document.getElementById("tabela-pedidos-body");
+  if (table) {
+    table.innerHTML = `<tr><td colspan='12' style='text-align:center; padding: 30px; color: ${cor};'>${mensagem}</td></tr>`;
   }
 }
 
 function mostrarPaginaPedidos() {
-  const tabela = document.getElementById("tabela-pedidos-body");
-  if (!tabela) return;
-  tabela.innerHTML = "";
+  const table = document.getElementById("tabela-pedidos-body");
+  if (!table) return;
+  table.innerHTML = "";
 
   if (pedidos.length === 0) {
-    tabela.innerHTML =
+    table.innerHTML =
       "<tr><td colspan='12' style='text-align:center; opacity: 0.6; padding: 20px;'>Nenhum pedido encontrado para este evento.</td></tr>";
     if (document.getElementById("current-page-pedidos"))
       document.getElementById("current-page-pedidos").textContent = 1;
@@ -879,7 +879,7 @@ function mostrarPaginaPedidos() {
     const transferido = pedido.transferido ? "Sim" : "Não";
     const aprovado = pedido.aprovado ? "Sim" : "Não";
 
-    tabela.innerHTML += `
+    table.innerHTML += `
         <tr>
           <td>#${pedido.id}</td>
           <td><strong>${pedido.cliente_nome || "---"}</strong></td>
@@ -950,4 +950,33 @@ function aplicarTema(theme) {
   }
 
   lucide.createIcons();
+}
+
+// --- CONTROLE DE MÓDULO: POPUP DE LOGOUT DO ADMINISTRADOR ---
+
+function abrirModalLogout() {
+  const modal = document.getElementById('modal-logout');
+  if (modal) {
+    modal.style.display = 'flex';
+    if (typeof lucide !== 'undefined') {
+      lucide.createIcons();
+    }
+  }
+}
+
+function fecharModalLogout() {
+  const modal = document.getElementById('modal-logout');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+}
+
+function confirmarLogout() {
+  // Limpa credenciais JWT e estados salvos de forma abrangente
+  localStorage.removeItem("token");
+  localStorage.removeItem("user_data");
+  sessionStorage.clear();
+
+  // Encaminha de volta para a view de autenticação
+  window.location.href = "login.html";
 }

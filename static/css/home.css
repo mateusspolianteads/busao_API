@@ -880,13 +880,11 @@ body.light-mode .event-card-actions {
 /* --- ESTILO PARA CARD SEM IMAGEM --- */
 .event-card-banner.no-image {
   background-color: #050505;
-  /* Deixei mais escuro (cinza quase preto absoluto) como pediu */
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
   border-bottom: 1px solid var(--border);
-  /* Adiciona um sombreado interno sutil para dar profundidade ao card */
   box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.8);
 }
 
@@ -950,7 +948,6 @@ body.light-mode .event-card-banner.no-image::after {
   }
 }
 
-/* Container do Filtro */
 .filter-container {
   display: flex;
   align-items: center;
@@ -961,14 +958,12 @@ body.light-mode .event-card-banner.no-image::after {
   border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
-/* Label/Texto de instrução */
 .filter-label {
   font-size: 14px;
   font-weight: 600;
   color: var(--text-dim, #a0aec0);
 }
 
-/* Select Customizado (Modo Escuro Padrão) */
 .filter-select {
   padding: 10px 16px;
   font-size: 14px;
@@ -984,7 +979,6 @@ body.light-mode .event-card-banner.no-image::after {
   transition: all 0.2s ease-in-out;
 }
 
-/* Estados de Interação (Modo Escuro) */
 .filter-select:hover {
   background-color: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.2);
@@ -992,22 +986,16 @@ body.light-mode .event-card-banner.no-image::after {
 
 .filter-select:focus {
   border-color: #00ff88;
-  /* Tom verde de sucesso do seu projeto */
   box-shadow: 0 0 0 3px rgba(0, 255, 136, 0.15);
 }
 
-/* Opções internas do Select (Modo Escuro) */
 .filter-select option {
   background-color: #18181c;
-  /* Fundo escuro para os itens do menu */
   color: #ffffff;
   padding: 8px;
 }
 
 
-/* ==========================================
-   ADAPTAÇÃO COMPATÍVEL COM O MODO CLARO
-   ========================================== */
 body.light-mode .filter-container {
   background-color: rgba(0, 0, 0, 0.02);
   border-color: rgba(0, 0, 0, 0.06);
@@ -1031,11 +1019,60 @@ body.light-mode .filter-select:hover {
 
 body.light-mode .filter-select:focus {
   border-color: #00aa5b;
-  /* Tom verde adaptado para melhor contraste no claro */
   box-shadow: 0 0 0 3px rgba(0, 170, 91, 0.15);
 }
 
 body.light-mode .filter-select option {
   background-color: #ffffff;
   color: #1a202c;
+}
+
+/*BOTÃO LOGOUT (NA TELA DE CONFIGURAÇÕES)*/
+.btn-logout-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--glass);
+  color: #ff4d4d;
+  padding: 12px 22px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 77, 77, 0.2);
+  cursor: pointer;
+  font-weight: 700;
+  font-family: inherit;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  margin-top: 18px; /* <--- ADICIONADO AQUI: Cria o espaço entre a descrição e o botão */
+  width: fit-content; /* Garante que o botão não estique se o container pai for flexbox col */
+}
+
+.btn-logout-trigger:hover {
+  background: #ff4d4d;
+  color: #ffffff;
+  border-color: #ff4d4d;
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(255, 77, 77, 0.3);
+}
+
+.btn-logout-trigger svg {
+  width: 18px;
+  height: 18px;
+}
+
+/*BOTÃO DE CONFIRMAÇÃO DENTRO DO POPUP*/
+.btn-delete-confirm {
+  flex: 2;
+  background: linear-gradient(45deg, #8b0000, #ff4d4d);
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.btn-delete-confirm:hover {
+  opacity: 0.9;
+  transform: scale(1.02);
 }
