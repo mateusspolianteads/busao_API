@@ -7,7 +7,8 @@ from routes import (
     pedidos,
     categorias,
     upload,
-    importacao_route
+    importacao_route,
+    login_route
 )
 
 from fastapi.middleware.cors import CORSMiddleware
@@ -46,6 +47,7 @@ app.include_router(pedidos.router)
 app.include_router(categorias.router)
 app.include_router(upload.router)
 app.include_router(importacao_route.router)
+app.include_router(login_route.router)
 
 # Home
 @app.get("/")
