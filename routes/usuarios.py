@@ -5,7 +5,7 @@ from services.usuario_service import criar_usuario, consultar_usuario
 from services.email_service import enviar_email
 from pydantic import BaseModel
 from models.usuario import Usuario
-from utils.security import verificar_senha, criar_token, criar_refresh_token, criar_token_reset_senha, validar_token_reset_senha
+from utils.security import criar_token_reset_senha, validar_token_reset_senha
 from crm.email_reset_senha import template_reset_senha
 from schemas.esqueci_senha import EsqueciSenhaSchema
 from schemas.resetar_senha import ResetarSenhaSchema
@@ -36,40 +36,7 @@ def cadastrar(usuario: UsuarioCreate):
             }
         }
     finally:
-        db.close()  
-
-
-@router.post("/login")
-def login(dados: LoginSchema):
-    db = SessionLocal()
-    try:
-        user = db.query(Usuario).filter(
-            (Usuario.nome == dados.usuario) | (Usuario.email == dados.usuario),
-        ).first()
-
-        if not user:
-            raise HTTPException(status_code=401, detail="Usuário ou senha incorretos")
-        
-        if not verificar_senha(dados.senha, user.senha):
-            raise HTTPException(status_code=401, detail="Usuário ou senha incorretos")
-
-        access_token = criar_token({"sub": user.email})
-        refresh_token = criar_refresh_token({"sub": user.email})
-
-        return {
-            "status": "ok",
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "usuario": {
-                "id": user.id,
-                "nome": user.nome,
-                "email": user.email
-            }
-        }
-    
-    finally:
-        db.close()
-
+        db.close() 
 
 @router.get("/consultar/{id}")
 def consultar_por_id(id: int):
