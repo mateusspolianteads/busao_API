@@ -41,46 +41,79 @@
           </div>
         </header>
 
+        <section class="filters-row">
+          <div class="filter-container">
+            <label for="select-canal-venda-dashboard" class="filter-label">
+              Canal de Venda:
+            </label>
+            <select id="select-canal-venda-dashboard" class="filter-select">
+              <option value="">Todos os canais</option>
+            </select>
+          </div>
+          <div class="filter-container">
+            <label for="select-periodo-dashboard" class="filter-label">
+              Período:
+            </label>
+            <select id="select-periodo-dashboard" class="filter-select">
+              <option value="">Todos os períodos</option>
+            </select>
+          </div>
+        </section>
+
         <section class="metrics">
           <div class="card">
             <h3>Total de Vendas</h3>
-            <p class="value">R$ 12.450,00</p>
-            <span class="trend positive">+15% este mês</span>
+            <p class="value" id="dashboard-total-vendas">R$ 0,00</p>
+            <span class="trend positive" id="dashboard-vendas-trend"></span>
           </div>
           <div class="card">
             <h3>Ingressos Vendidos</h3>
-            <p class="value">458</p>
-            <span class="trend">85% da meta</span>
+            <p class="value" id="dashboard-ingressos-vendidos">0</p>
+            <span class="trend" id="dashboard-ingressos-trend"></span>
           </div>
           <div class="card">
-            <h3>Eventos Ativos</h3>
-            <p class="value">12</p>
+            <h3>Eventos com Venda</h3>
+            <p class="value" id="dashboard-eventos-ativos">0</p>
           </div>
         </section>
 
         <section class="recent-sales">
-          <h2>Últimas Transações</h2>
+          <h2>Eventos Vendidos</h2>
           <div class="table-container">
             <table>
               <thead>
                 <tr>
-                  <th>Cliente</th>
                   <th>Evento</th>
-                  <th>Data</th>
-                  <th>Status</th>
-                  <th>Valor</th>
+                  <th>Ingressos Vendidos</th>
+                  <th>Total de Vendas</th>
+                  <th>Canal de Venda</th>
+                  <th>Período</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody id="dashboard-eventos-body">
                 <tr>
-                  <td>João Silva</td>
-                  <td>Festa Universitária</td>
-                  <td>22/05/2026</td>
-                  <td><span class="status paid">Pago</span></td>
-                  <td>R$ 80,00</td>
+                  <td colspan="5" style="text-align:center; opacity: 0.7; padding: 20px;">
+                    Carregando dados do dashboard...
+                  </td>
                 </tr>
               </tbody>
             </table>
+          </div>
+
+          <div class="pagination-container dashboard-pagination">
+            <button class="pagination-btn" id="prev-page-dashboard" title="Página Anterior" onclick="trocarPaginaDashboard(-1)">
+              <i data-lucide="chevron-left"></i>
+            </button>
+
+            <div class="pagination-info">
+              <span id="dashboard-current-page" class="current-page">1</span>
+              <span class="separator">de</span>
+              <span id="dashboard-total-pages" class="total-pages">1</span>
+            </div>
+
+            <button class="pagination-btn" id="next-page-dashboard" title="Próxima Página" onclick="trocarPaginaDashboard(1)">
+              <i data-lucide="chevron-right"></i>
+            </button>
           </div>
         </section>
       </div>
@@ -403,15 +436,6 @@
       <p id="status-progresso" style="color: #666; font-size: 14px; margin-bottom: 10px">
         Lendo os dados do arquivo, por favor aguarde...
       </p>
-
-      <div id="porcentagem-progresso" style="
-            font-weight: bold;
-            font-size: 18px;
-            color: #333;
-            margin-top: 15px;
-          ">
-        0%
-      </div>
 
       <button type="button" id="btn-cancelar-importacao" onclick="cancelarImportacao()" style="
             margin-top: 25px;

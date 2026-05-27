@@ -16,6 +16,15 @@ let idEventoAtual = null;
 let xhrImportacaoAtual = null;
 let intervaloProgressoImportacao = null;
 
+let vendedoresDashboard = [];
+let periodosDashboard = [];
+let eventosDashboard = [];
+let dashboardPaginaAtual = 1;
+const dashboardPorPagina = 10;
+let dashboardTotalPaginas = 1;
+let dashboardFiltroCanal = "";
+let dashboardFiltroPeriodo = "";
+
 function getAuthHeaders() {
   return {
     "Content-Type": "application/json",

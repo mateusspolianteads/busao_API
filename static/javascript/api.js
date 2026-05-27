@@ -1,4 +1,8 @@
-async function importarPlanilha(event, endpoint, tituloModal = "Processando Planilha") {
+async function importarPlanilha(
+  event,
+  endpoint,
+  tituloModal = "Processando Planilha",
+) {
   const arquivo = event.target.files[0];
   if (!arquivo) return;
 
@@ -31,6 +35,10 @@ async function importarPlanilha(event, endpoint, tituloModal = "Processando Plan
   formData.append("evento_id", idEventoAtual);
 
   xhr.open("POST", `${API_URL}${endpoint}`);
+  const authHeaders = getAuthHeaders();
+  if (authHeaders.Authorization) {
+    xhr.setRequestHeader("Authorization", authHeaders.Authorization);
+  }
 
   xhr.onload = () => {
     clearInterval(intervaloProgressoImportacao);
@@ -69,6 +77,7 @@ async function importarPlanilha(event, endpoint, tituloModal = "Processando Plan
 
         setTimeout(() => {
           fecharModalProgresso();
+          window.location.reload();
         }, 2500);
       } catch (e) {
         console.error("Erro ao ler JSON de resposta:", e);
@@ -464,5 +473,41 @@ async function carregarPedidos(eventoId = null) {
       "Erro crítico ao se comunicar com o servidor.",
       "#ff4d4d",
     );
+  }
+}
+
+async function carregarDashboard(canal_venda = "", periodo = "") {
+  try {
+    const query = new URLSearchParams();
+    if (canal_venda) query.append("canal_venda", canal_venda);
+    if (periodo) query.append("periodo", periodo);
+
+    const url = `${API_URL}/pedidos/dashboard?${query.toString()}`;
+    const response = await fetch(url, {
+      headers: getAuthHeaders(),
+    });
+    if (!response.ok) throw new Error(`Status ${response.status}`);
+
+    const dados = await response.json();
+    vendedoresDashboard = dados.filtros.vendedores || [];
+    periodosDashboard = dados.filtros.periodos || [];
+    eventosDashboard = dados.eventos || [];
+    dashboardFiltroCanal = canal_venda || "";
+    dashboardFiltroPeriodo = periodo || "";
+    dashboardPaginaAtual = 1;
+    dashboardTotalPaginas =
+      Math.ceil(eventosDashboard.length / dashboardPorPagina) || 1;
+
+    atualizarDashboardMetrics(dados.totals || {});
+    popularFiltrosDashboard(canal_venda, periodo);
+    renderizarDashboardEventos(eventosDashboard);
+  } catch (error) {
+    console.error("Erro ao carregar dashboard:", error);
+    atualizarDashboardMetrics({
+      total_vendas: 0,
+      ingressos_vendidos: 0,
+      eventos_com_venda: 0,
+    });
+    renderizarDashboardEventos([]);
   }
 }

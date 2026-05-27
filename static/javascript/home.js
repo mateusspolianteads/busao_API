@@ -167,6 +167,21 @@
     });
   }
 
+  const selectCanalVenda = document.getElementById(
+    "select-canal-venda-dashboard",
+  );
+  const selectPeriodo = document.getElementById("select-periodo-dashboard");
+
+  if (selectCanalVenda)
+    selectCanalVenda.addEventListener("change", () => {
+      carregarDashboard(selectCanalVenda.value, selectPeriodo?.value || "");
+    });
+
+  if (selectPeriodo)
+    selectPeriodo.addEventListener("change", () => {
+      carregarDashboard(selectCanalVenda?.value || "", selectPeriodo.value);
+    });
+
   const themeBtn = document.getElementById("theme-toggle");
   if (themeBtn) {
     themeBtn.addEventListener("click", () => {
@@ -179,4 +194,5 @@
   }
 
   carregarEventos();
+  carregarDashboard();
 });

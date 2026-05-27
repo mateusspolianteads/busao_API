@@ -133,7 +133,107 @@ function mostrarPaginaPedidos() {
 
   lucide.createIcons();
 }
+function popularFiltrosDashboard(canal_venda = "", periodo = "") {
+  const selectCanal = document.getElementById("select-canal-venda-dashboard");
+  const selectPeriodo = document.getElementById("select-periodo-dashboard");
 
+  if (selectCanal) {
+    selectCanal.innerHTML = `<option value="">Todos os canais</option>`;
+    vendedoresDashboard.forEach((vendedor) => {
+      const selected = vendedor === canal_venda ? "selected" : "";
+      selectCanal.innerHTML += `<option value="${vendedor}" ${selected}>${vendedor}</option>`;
+    });
+  }
+
+  if (selectPeriodo) {
+    selectPeriodo.innerHTML = `<option value="">Todos os períodos</option>`;
+    periodosDashboard.forEach((periodoItem) => {
+      const selected = periodoItem === periodo ? "selected" : "";
+      selectPeriodo.innerHTML += `<option value="${periodoItem}" ${selected}>${periodoItem}</option>`;
+    });
+  }
+}
+
+function atualizarDashboardMetrics(totals = {}) {
+  const totalVendas = totals.total_vendas || 0;
+  const ingressosVendidos = totals.ingressos_vendidos || 0;
+  const eventosAtivos = totals.eventos_com_venda || 0;
+
+  const totalVendasEl = document.getElementById("dashboard-total-vendas");
+  const ingressosEl = document.getElementById("dashboard-ingressos-vendidos");
+  const eventosEl = document.getElementById("dashboard-eventos-ativos");
+
+  if (totalVendasEl)
+    totalVendasEl.textContent = totalVendas.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  if (ingressosEl) ingressosEl.textContent = ingressosVendidos;
+  if (eventosEl) eventosEl.textContent = eventosAtivos;
+}
+
+function renderizarDashboardEventos(eventos) {
+  const tbody = document.getElementById("dashboard-eventos-body");
+  if (!tbody) return;
+
+  dashboardTotalPaginas = Math.ceil((eventos?.length || 0) / dashboardPorPagina) || 1;
+  if (dashboardPaginaAtual > dashboardTotalPaginas) dashboardPaginaAtual = dashboardTotalPaginas;
+
+  const paginaInicial = (dashboardPaginaAtual - 1) * dashboardPorPagina;
+  const paginaFinal = paginaInicial + dashboardPorPagina;
+  const eventosPagina = eventos.slice(paginaInicial, paginaFinal);
+
+  if (!eventos || eventos.length === 0) {
+    tbody.innerHTML =
+      "<tr><td colspan='5' style='text-align:center; opacity: 0.6; padding: 20px;'>Nenhum evento encontrado para esse filtro.</td></tr>";
+    atualizarPaginacaoDashboard();
+    return;
+  }
+
+  tbody.innerHTML = "";
+  eventosPagina.forEach((evento) => {
+    const nomeEvento = evento.evento_nome || evento.nome || "---";
+    const ingressosVendidos = evento.total_pedidos || evento.ingressos_vendidos || 0;
+    const totalVendas = evento.total_vendas || 0;
+    const canal = evento.canal_venda || dashboardFiltroCanal || "Todos";
+    const periodo = evento.periodo || dashboardFiltroPeriodo || "Todos";
+
+    tbody.innerHTML += `
+      <tr>
+        <td>${nomeEvento}</td>
+        <td>${ingressosVendidos}</td>
+        <td>${totalVendas.toLocaleString("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+        })}</td>
+        <td>${canal}</td>
+        <td>${periodo}</td>
+      </tr>
+    `;
+  });
+
+  atualizarPaginacaoDashboard();
+}
+
+function atualizarPaginacaoDashboard() {
+  const currentPage = document.getElementById("dashboard-current-page");
+  const totalPages = document.getElementById("dashboard-total-pages");
+  const prevBtn = document.getElementById("prev-page-dashboard");
+  const nextBtn = document.getElementById("next-page-dashboard");
+
+  if (currentPage) currentPage.textContent = dashboardPaginaAtual;
+  if (totalPages) totalPages.textContent = dashboardTotalPaginas;
+  if (prevBtn) prevBtn.disabled = dashboardPaginaAtual <= 1;
+  if (nextBtn) nextBtn.disabled = dashboardPaginaAtual >= dashboardTotalPaginas;
+}
+
+function trocarPaginaDashboard(delta) {
+  dashboardPaginaAtual = Math.min(
+    Math.max(1, dashboardPaginaAtual + delta),
+    dashboardTotalPaginas,
+  );
+  renderizarDashboardEventos(eventosDashboard);
+}
 function trocarPagina(id) {
   document
     .querySelectorAll(".tab-content")
