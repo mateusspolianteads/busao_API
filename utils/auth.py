@@ -1,6 +1,8 @@
 import os
 import jwt
-from fastapi import Header, HTTPException, Depends
+
+from fastapi import HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -8,17 +10,16 @@ load_dotenv()
 SECRET_KEY = os.getenv("SECRET_KEY")
 ALGORITHM = os.getenv("ALGORITHM")
 
+security = HTTPBearer()
 
-def verify_token(authorization: str = Header(None)):
 
-    if not authorization:
-        raise HTTPException(
-            status_code=401,
-            detail="Token não enviado"
-        )
+def verify_token(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
 
     try:
-        token = authorization.replace("Bearer ", "")
+
+        token = credentials.credentials
 
         payload = jwt.decode(
             token,
@@ -32,7 +33,7 @@ def verify_token(authorization: str = Header(None)):
                 detail="Token inválido"
             )
 
-        return payload 
+        return payload
 
     except jwt.ExpiredSignatureError:
         raise HTTPException(
