@@ -22,11 +22,31 @@ document.addEventListener("DOMContentLoaded", () => {
         const resultado = await response.json();
 
         if (response.ok) {
-          localStorage.setItem("access_token", resultado.access_token);
-          localStorage.setItem("refresh_token", resultado.refresh_token);
+          console.log("LOGIN RESPONSE:", resultado);
+
+          const token =
+            resultado.access_token ||
+            resultado.token ||
+            resultado.access ||
+            resultado.data?.access_token;
+
+          const refresh =
+            resultado.refresh_token ||
+            resultado.refresh ||
+            resultado.data?.refresh_token;
+
+          if (!token) {
+            alert("Erro: backend não retornou token");
+            return;
+          }
+
+          localStorage.setItem("token", token);
+
+          if (refresh) {
+            localStorage.setItem("refresh_token", refresh);
+          }
 
           alert("Login realizado com sucesso!");
-
           window.location.href = "home.html";
         } else {
           if (Array.isArray(resultado.detail)) {

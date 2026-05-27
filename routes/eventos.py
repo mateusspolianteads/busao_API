@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from database import SessionLocal
 from schemas.evento import EventoCreate, EventoUpdate
 from models.evento import Evento
@@ -9,10 +9,12 @@ from services.eventos_service import (
     atualizar_evento,
     deletar_evento
 )
+from utils.auth import verify_token
 
 router = APIRouter(
     prefix="/eventos",
-    tags=["Eventos"]
+    tags=["Eventos"],
+    dependencies=[Depends(verify_token)]
 )
 
 

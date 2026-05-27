@@ -5,7 +5,7 @@ from services.usuario_service import criar_usuario, consultar_usuario
 from services.email_service import enviar_email
 from pydantic import BaseModel
 from models.usuario import Usuario
-from utils.security import criar_token_reset_senha, validar_token_reset_senha
+from utils.security import criar_token_reset_senha, validar_token_reset_senha,renovar_access_token
 from crm.email_reset_senha import template_reset_senha
 from schemas.esqueci_senha import EsqueciSenhaSchema
 from schemas.resetar_senha import ResetarSenhaSchema
@@ -122,3 +122,27 @@ def resetar_senha(dados: ResetarSenhaSchema):
     finally:
 
         db.close()
+
+@router.post("/refresh")
+def refresh_token(dados: dict):
+
+    refresh_token = dados.get("refresh_token")
+
+    if not refresh_token:
+        raise HTTPException(
+            status_code=400,
+            detail="Refresh token obrigatório"
+        )
+
+    try:
+        novo_access_token = renovar_access_token(refresh_token)
+
+        return {
+            "access_token": novo_access_token
+        }
+
+    except Exception:
+        raise HTTPException(
+            status_code=401,
+            detail="Refresh token inválido"
+        )

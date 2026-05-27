@@ -1,5 +1,7 @@
 const API_URL = "http://localhost:8000";
 
+const token = localStorage.getItem("token");
+
 let clientes = [];
 let paginaAtualClientes = 1;
 const clientesPorPagina = 10;
@@ -57,7 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         const response = await fetch(`${API_URL}/clientes/atualizar/${id}`, {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(),
           body: JSON.stringify(dados),
         });
 
@@ -112,7 +114,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const response = await fetch(url, {
           method: method,
-          headers: { "Content-Type": "application/json" },
+          headers: getAuthHeaders(),
           body: JSON.stringify(dadosEvento),
         });
 
@@ -381,7 +383,10 @@ async function carregarClientes(eventoId = null) {
       ? `${API_URL}/clientes/evento/${idEventoAtual}?pagina=${paginaAtualClientes}&limite=10`
       : `${API_URL}/clientes/listar`;
 
-    const response = await fetch(url);
+    const response = await fetch(url,{
+        headers: getAuthHeaders(),
+      }
+    );
     if (!response.ok)
       throw new Error(`Erro na requisição: Status ${response.status}`);
 
@@ -533,7 +538,9 @@ function fecharModalEditar() {
 
 async function carregarCategorias() {
   try {
-    const response = await fetch(`${API_URL}/categorias/listar`);
+    const response = await fetch(`${API_URL}/categorias/listar`,{
+      headers: getAuthHeaders(),
+    });
     if (!response.ok) throw new Error();
     categorias = await response.json();
 
@@ -559,7 +566,9 @@ async function carregarEventos() {
   try {
     if (categorias.length === 0) await carregarCategorias();
 
-    const response = await fetch(`${API_URL}/eventos/listar`);
+    const response = await fetch(`${API_URL}/eventos/listar`,{
+      headers: getAuthHeaders(),
+    });
     if (!response.ok) return;
     const eventos = await response.json();
 
@@ -622,6 +631,8 @@ async function carregarEventos() {
   } catch (error) {
     console.error("Erro ao carregar eventos:", error);
   }
+
+  await popularFiltroEventosPedidos(idEventoAtual ?? "");
 }
 
 async function fazerUploadImagem(input) {
@@ -650,6 +661,7 @@ async function fazerUploadImagem(input) {
     const response = await fetch(`${API_URL}/upload/`, {
       method: "POST",
       body: formData,
+      headers: {Authorization: `Bearer ${localStorage.getItem("token")}`,},
     });
     const resultado = await response.json();
 
@@ -682,7 +694,9 @@ async function fazerUploadImagem(input) {
 async function prepararEdicaoEvento(id) {
   try {
     await carregarCategorias();
-    const response = await fetch(`${API_URL}/eventos/consultar/${id}`);
+    const response = await fetch(`${API_URL}/eventos/consultar/${id}`,{
+      headers: getAuthHeaders(),
+    });
     if (!response.ok) return;
     const evento = await response.json();
 
@@ -716,6 +730,7 @@ async function deletarEvento(id) {
   try {
     const response = await fetch(`${API_URL}/eventos/deletar/${id}`, {
       method: "DELETE",
+      headers: getAuthHeaders(),
     });
     if (response.ok) carregarEventos();
   } catch (error) {
@@ -751,13 +766,10 @@ async function popularFiltroEventosPedidos(idSelecionado) {
   const selectFiltro = document.getElementById("filtro-pedidos-evento");
   if (!selectFiltro) return;
 
-  if (selectFiltro.options.length > 1) {
-    selectFiltro.value = idSelecionado;
-    return;
-  }
-
   try {
-    const response = await fetch(`${API_URL}/eventos/listar`);
+    const response = await fetch(`${API_URL}/eventos/listar`,{
+      headers: getAuthHeaders(),
+    });
     if (!response.ok) return;
     const eventos = await response.json();
 
@@ -788,7 +800,9 @@ async function carregarPedidos(eventoId = null) {
 
   if (!idEventoAtual) {
     try {
-      const resEventos = await fetch(`${API_URL}/eventos/listar`);
+      const resEventos = await fetch(`${API_URL}/eventos/listar`,{
+        headers: getAuthHeaders(),
+      })
       if (resEventos.ok) {
         const eventos = await resEventos.json();
         if (eventos.length > 0) {
@@ -811,7 +825,9 @@ async function carregarPedidos(eventoId = null) {
 
   try {
     const response = await fetch(
-      `${API_URL}/pedidos/evento/${idEventoAtual}?pagina=${paginaAtualPedidos}&limite=${pedidosPorPagina}`,
+      `${API_URL}/pedidos/evento/${idEventoAtual}?pagina=${paginaAtualPedidos}&limite=${pedidosPorPagina}`,{
+        headers: getAuthHeaders(),
+      }
     );
 
     if (response.status === 404) {
@@ -931,7 +947,13 @@ function trocarPagina(id) {
     idEventoAtual = null;
     carregarEventos();
   }
-  if (id === "pedidos") carregarPedidos();
+  if (id === "pedidos"){
+    if (!idEventoAtual){
+      exibirMensagemTabelaPedidos("Selecione um evento para ver os pedidos.")
+      return
+    }
+
+  } carregarPedidos(idEventoAtual);
 }
 
 function aplicarTema(theme) {
@@ -952,8 +974,6 @@ function aplicarTema(theme) {
   lucide.createIcons();
 }
 
-// --- CONTROLE DE MÓDULO: POPUP DE LOGOUT DO ADMINISTRADOR ---
-
 function abrirModalLogout() {
   const modal = document.getElementById('modal-logout');
   if (modal) {
@@ -972,11 +992,16 @@ function fecharModalLogout() {
 }
 
 function confirmarLogout() {
-  // Limpa credenciais JWT e estados salvos de forma abrangente
   localStorage.removeItem("token");
   localStorage.removeItem("user_data");
   sessionStorage.clear();
 
-  // Encaminha de volta para a view de autenticação
   window.location.href = "login.html";
+}
+
+function getAuthHeaders() {
+  return {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${localStorage.getItem("token")}`,
+  };
 }

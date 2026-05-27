@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, File, Form, UploadFile, Request
+from fastapi import APIRouter, Depends, File, Form, UploadFile, Request, Depends
 from sqlalchemy.orm import Session
 from database import get_db 
 from services.importacao_service import processar_planilha_clientes_e_pedidos
+from utils.auth import verify_token
 
-router = APIRouter(prefix="/pedidos", tags=["Importação"]) 
+router = APIRouter(prefix="/pedidos", tags=["Importação"], dependencies=[Depends(verify_token)]) 
 
 @router.post("/importar-planilha", status_code=201)
 async def importar_clientes_e_pedidos_planilha(

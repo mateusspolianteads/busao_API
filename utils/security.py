@@ -76,3 +76,29 @@ def validar_token_reset_senha(token: str):
 
     except JWTError:
         return None
+    
+def renovar_access_token(refresh_token: str):
+
+    try:
+
+        payload = jwt.decode(
+            refresh_token,
+            SECRET_KEY,
+            algorithms=[ALGORITHM]
+        )
+
+        if payload.get("type") != "refresh":
+            raise Exception("Token inválido")
+
+        novo_payload = {
+            "sub": payload.get("sub")
+        }
+
+        novo_access_token = criar_token(
+            novo_payload
+        )
+
+        return novo_access_token
+
+    except JWTError:
+        raise Exception("Refresh token inválido")

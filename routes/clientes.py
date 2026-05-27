@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from database import SessionLocal
+from utils.auth import verify_token
 
 from schemas.cliente import ClienteUpdate
 from services.cliente_service import (
@@ -8,7 +9,7 @@ from services.cliente_service import (
     listar_clientes_por_evento,
 )
 
-router = APIRouter(prefix="/clientes", tags=["Clientes"])
+router = APIRouter(prefix="/clientes", tags=["Clientes"], dependencies=[Depends(verify_token)])
 
 
 @router.get("/listar")

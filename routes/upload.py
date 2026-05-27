@@ -1,11 +1,13 @@
-from fastapi import APIRouter, UploadFile, File
+from fastapi import APIRouter, UploadFile, File, Depends
 from supabase_client import supabase
 from uuid import uuid4
+from utils.auth import verify_token
 
 
 router = APIRouter(
     prefix="/upload",
-    tags=["Upload"]
+    tags=["Upload"],
+    dependencies=[Depends(verify_token)]
 )
 
 @router.post("/")

@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from database import SessionLocal
 from schemas.categoria import CategoriaCreate, CategoriaUpdate
 from services.categoria_service import (
@@ -8,10 +8,12 @@ from services.categoria_service import (
     atualizar_categoria,
     deletar_categoria
 )
+from utils.auth import verify_token
 
 router = APIRouter(
     prefix="/categorias",
-    tags=["Categorias"]
+    tags=["Categorias"],
+    dependencies=[Depends(verify_token)]
 )
 
 @router.post("/cadastrar")

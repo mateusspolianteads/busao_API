@@ -1,10 +1,11 @@
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
 from database import SessionLocal
 from models.cliente import Cliente
 from models.evento import Evento
 from models.pedido import Pedido
+from utils.auth import verify_token
 
-router = APIRouter(prefix="/pedidos", tags=["Pedidos"])
+router = APIRouter(prefix="/pedidos", tags=["Pedidos"], dependencies=[Depends(verify_token)])
 
 @router.get("/evento/{evento_id}")
 def listar_por_evento(
