@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
             button.textContent = "Redefinindo...";
 
             try {
-                const response = await fetch("http://127.0.0.1:8000/usuarios/resetar-senha", {
+                const response = await fetch(`${API_URL}/usuarios/resetar-senha`, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json"
