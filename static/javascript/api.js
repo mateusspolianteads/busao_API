@@ -34,7 +34,7 @@ async function importarPlanilha(
   formData.append("file", arquivo);
   formData.append("evento_id", idEventoAtual);
 
-  xhr.open("POST", `${API_URL}${endpoint}`);
+  xhr.open("POST", `${window.API_URL}${endpoint}`);
   const authHeaders = getAuthHeaders();
   if (authHeaders.Authorization) {
     xhr.setRequestHeader("Authorization", authHeaders.Authorization);
@@ -115,8 +115,8 @@ async function carregarClientes(eventoId = null) {
 
   try {
     const url = idEventoAtual
-      ? `${API_URL}/clientes/evento/${idEventoAtual}?pagina=${paginaAtualClientes}&limite=10`
-      : `${API_URL}/clientes/listar`;
+      ? `${window.API_URL}/clientes/evento/${idEventoAtual}?pagina=${paginaAtualClientes}&limite=10`
+      : `${window.API_URL}/clientes/listar`;
 
     const response = await fetch(url, {
       headers: getAuthHeaders(),
@@ -185,7 +185,7 @@ async function verClientesDoEvento(idEvento, nomeEvento, botao) {
 
 async function carregarCategorias() {
   try {
-    const response = await fetch(`${API_URL}/categorias/listar`, {
+    const response = await fetch(`${window.API_URL}/categorias/listar`, {
       headers: getAuthHeaders(),
     });
     if (!response.ok) throw new Error();
@@ -213,7 +213,7 @@ async function carregarEventos() {
   try {
     if (categorias.length === 0) await carregarCategorias();
 
-    const response = await fetch(`${API_URL}/eventos/listar`, {
+    const response = await fetch(`${window.API_URL}/eventos/listar`, {
       headers: getAuthHeaders(),
     });
     if (!response.ok) return;
@@ -305,7 +305,7 @@ async function fazerUploadImagem(input) {
   formData.append("file", file);
 
   try {
-    const response = await fetch(`${API_URL}/upload/`, {
+    const response = await fetch(`${window.API_URL}/upload/`, {
       method: "POST",
       body: formData,
       headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
@@ -341,7 +341,7 @@ async function fazerUploadImagem(input) {
 async function prepararEdicaoEvento(id) {
   try {
     await carregarCategorias();
-    const response = await fetch(`${API_URL}/eventos/consultar/${id}`, {
+    const response = await fetch(`${window.API_URL}/eventos/consultar/${id}`, {
       headers: getAuthHeaders(),
     });
     if (!response.ok) return;
@@ -375,7 +375,7 @@ async function prepararEdicaoEvento(id) {
 async function deletarEvento(id) {
   if (!confirm("Remover este evento de forma permanente?")) return;
   try {
-    const response = await fetch(`${API_URL}/eventos/deletar/${id}`, {
+    const response = await fetch(`${window.API_URL}/eventos/deletar/${id}`, {
       method: "DELETE",
       headers: getAuthHeaders(),
     });
@@ -390,7 +390,7 @@ async function popularFiltroEventosPedidos(idSelecionado) {
   if (!selectFiltro) return;
 
   try {
-    const response = await fetch(`${API_URL}/eventos/listar`, {
+    const response = await fetch(`${window.API_URL}/eventos/listar`, {
       headers: getAuthHeaders(),
     });
     if (!response.ok) return;
@@ -423,7 +423,7 @@ async function carregarPedidos(eventoId = null) {
 
   if (!idEventoAtual) {
     try {
-      const resEventos = await fetch(`${API_URL}/eventos/listar`, {
+      const resEventos = await fetch(`${window.API_URL}/eventos/listar`, {
         headers: getAuthHeaders(),
       });
       if (resEventos.ok) {
@@ -448,7 +448,7 @@ async function carregarPedidos(eventoId = null) {
 
   try {
     const response = await fetch(
-      `${API_URL}/pedidos/evento/${idEventoAtual}?pagina=${paginaAtualPedidos}&limite=${pedidosPorPagina}`,
+      `${window.API_URL}/pedidos/evento/${idEventoAtual}?pagina=${paginaAtualPedidos}&limite=${pedidosPorPagina}`,
       {
         headers: getAuthHeaders(),
       },

@@ -8,7 +8,7 @@ router = APIRouter(
     tags=["Login"]
 )
 
-@router.post("/")
+@router.post("")
 def login(dados: LoginSchema):
 
     db = SessionLocal()

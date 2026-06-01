@@ -28,7 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
 
             const response = await fetch(
-                "http://127.0.0.1:8000/usuarios/esqueci-senha",
+                `${window.API_URL}/usuarios/esqueci-senha`,
                 {
                     method: "POST",
                     headers: {

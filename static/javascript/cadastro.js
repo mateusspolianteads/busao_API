@@ -67,7 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       try {
         const response = await fetch(
-          `${API_URL}/usuarios/cadastrar`,
+          `${window.API_URL}/usuarios/cadastrar`,
           {
             method: "POST",
             headers: {

@@ -42,7 +42,7 @@
       }
 
       try {
-        const response = await fetch(`${API_URL}/clientes/atualizar/${id}`, {
+        const response = await fetch(`${window.API_URL}/clientes/atualizar/${id}`, {
           method: "PUT",
           headers: getAuthHeaders(),
           body: JSON.stringify(dados),
@@ -93,8 +93,8 @@
 
       try {
         const url = id
-          ? `${API_URL}/eventos/atualizar/${id}`
-          : `${API_URL}/eventos/cadastrar`;
+          ? `${window.API_URL}/eventos/atualizar/${id}`
+          : `${window.API_URL}/eventos/cadastrar`;
         const method = id ? "PUT" : "POST";
 
         const response = await fetch(url, {

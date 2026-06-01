@@ -1,4 +1,6 @@
-const API_URL = "https://busao-api.onrender.com";
+window.API_URL = (window.location.origin.includes("localhost") || window.location.origin.includes("127.0.0.1"))
+  ? "http://127.0.0.1:8000"
+  : "https://busao-api.onrender.com";
 const token = localStorage.getItem("token");
 
 let clientes = [];
