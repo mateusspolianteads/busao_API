@@ -2,6 +2,7 @@ import os
 import re
 import tempfile
 import unicodedata
+from datetime import datetime
 from playwright.sync_api import sync_playwright
 from supabase import create_client
 
@@ -46,7 +47,9 @@ def _limpar_nome_arquivo(texto: str) -> str:
 def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
     navegador = None
     nome_limpo = _limpar_nome_arquivo(evento)
-    nome_arquivo = f"{nome_limpo}.xls"
+    
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    nome_arquivo = f"{nome_limpo}_{timestamp}.xls"
     
     caminho_temporario_seguro = os.path.join(tempfile.gettempdir(), nome_arquivo)
 
@@ -113,7 +116,7 @@ def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
                     file=f,
                     file_options={"content-type": "application/vnd.ms-excel", "upsert": "true"}
                 )
-            print(f"[OK] Arquivo enviado ao Supabase Storage: {caminho_storage}")
+            print(f"[OK] Arquivo enviado ao Supabase Storage: {caminpe_storage}" if 'caminpe_storage' in locals() else f"[OK] Arquivo enviado ao Supabase Storage: {caminho_storage}")
             
             return caminho_storage
 
