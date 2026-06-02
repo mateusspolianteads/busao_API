@@ -116,7 +116,7 @@ def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
                     file=f,
                     file_options={"content-type": "application/vnd.ms-excel", "upsert": "true"}
                 )
-            print(f"[OK] Arquivo enviado ao Supabase Storage: {caminpe_storage}" if 'caminpe_storage' in locals() else f"[OK] Arquivo enviado ao Supabase Storage: {caminho_storage}")
+            print(f"[OK] Arquivo enviado ao Supabase Storage: {caminho_storage}" if 'caminpe_storage' in locals() else f"[OK] Arquivo enviado ao Supabase Storage: {caminho_storage}")
             
             return caminho_storage
 

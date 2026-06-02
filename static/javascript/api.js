@@ -299,7 +299,7 @@ async function fazerUploadImagem(input) {
     const response = await fetch(`${window.API_URL}/upload/`, {
       method: "POST",
       body: formData,
-      headers: getAuthHeaders()
+      headers: {Authorization: getAuthHeaders().Authorization}
     });
     const resultado = await response.json();
 
