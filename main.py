@@ -16,7 +16,7 @@ print("pedidos", datetime.now())
 from routes import pedidos
 
 print("categorias", datetime.now())
-from routes import categoriass
+from routes import categorias
 
 print("upload", datetime.now())
 from routes import upload
