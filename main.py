@@ -3,17 +3,32 @@ from database import Base, engine
 from datetime import datetime
 
 print("Início:", datetime.now())
-from routes import (
-    usuarios,
-    clientes,
-    eventos,
-    pedidos,
-    categorias,
-    upload,
-    importacao_route,
-    login_route,
-    export_route,
-)
+print("usuarios", datetime.now())
+from routes import usuarios
+
+print("clientes", datetime.now())
+from routes import clientes
+
+print("eventos", datetime.now())
+from routes import eventos
+
+print("pedidos", datetime.now())
+from routes import pedidos
+
+print("categorias", datetime.now())
+from routes import categoriass
+
+print("upload", datetime.now())
+from routes import upload
+
+print("importacao_route", datetime.now())
+from routes import importacao_route
+
+print("login_route", datetime.now())
+from routes import login_route
+
+print("export_route", datetime.now())
+from routes import export_route
 
 print("Rotas carregadas:", datetime.now())
 
