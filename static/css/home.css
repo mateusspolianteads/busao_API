@@ -535,6 +535,12 @@ td:last-child {
   transition: 0.3s;
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
 .btn-import:hover {
   background: var(--primary);
   border-color: var(--primary);

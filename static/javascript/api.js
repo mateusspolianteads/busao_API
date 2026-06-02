@@ -1,8 +1,4 @@
-async function importarPlanilha(
-  event,
-  endpoint,
-  tituloModal = "Processando Planilha",
-) {
+async function importarPlanilha(event, endpoint, tituloModal = "Processando Planilha") {
   const arquivo = event.target.files[0];
   if (!arquivo) return;
 
@@ -16,7 +12,7 @@ async function importarPlanilha(
   atualizarModalProgresso(0, "Iniciando leitura e upload do arquivo...");
 
   let porcentagemSimulada = 0;
-
+  // Usa a sua variável global já existente
   intervaloProgressoImportacao = setInterval(() => {
     if (porcentagemSimulada < 95) {
       porcentagemSimulada += 1;
@@ -28,6 +24,7 @@ async function importarPlanilha(
   }, 1000);
 
   const xhr = new XMLHttpRequest();
+  // Alimenta a sua variável global já existente
   xhrImportacaoAtual = xhr;
 
   const formData = new FormData();
@@ -77,7 +74,6 @@ async function importarPlanilha(
 
         setTimeout(() => {
           fecharModalProgresso();
-          window.location.reload();
         }, 2500);
       } catch (e) {
         console.error("Erro ao ler JSON de resposta:", e);
@@ -127,11 +123,7 @@ async function carregarClientes(eventoId = null) {
     const textoResposta = await response.text();
     let dadosBrutos = textoResposta.trim() ? JSON.parse(textoResposta) : [];
 
-    if (
-      dadosBrutos &&
-      typeof dadosBrutos === "object" &&
-      !Array.isArray(dadosBrutos)
-    ) {
+    if (dadosBrutos && typeof dadosBrutos === "object" && !Array.isArray(dadosBrutos)) {
       totalClientesBanco = dadosBrutos.total || 0;
       clientes = dadosBrutos.clientes || [];
     } else {
@@ -185,7 +177,6 @@ async function verClientesDoEvento(idEvento, nomeEvento, botao) {
 
 async function carregarCategorias() {
   console.log("[CATEGORIAS] Carregando categorias...");
-  console.trace("[CATEGORIAS] Stack trace:");
   try {
     const response = await fetch(`${window.API_URL}/categorias/listar`, {
       headers: getAuthHeaders(),
@@ -207,7 +198,6 @@ async function carregarCategorias() {
 
 async function carregarEventos() {
   console.log("[EVENTOS] Carregando eventos...");
-  console.trace("[EVENTOS] Stack trace:");
   const gridContainer = document.getElementById("tabela-eventos-body");
   if (gridContainer) {
     gridContainer.innerHTML =
@@ -221,18 +211,21 @@ async function carregarEventos() {
       headers: getAuthHeaders(),
     });
     if (!response.ok) return;
-    const eventos = await response.json();
+    
+    // cacheEventos assume-se global ou vinda do escopo correto do sistema
+    const listaEventos = await response.json(); 
+    window.cacheEventos = listaEventos; 
 
     if (!gridContainer) return;
     gridContainer.innerHTML = "";
 
-    if (eventos.length === 0) {
+    if (listaEventos.length === 0) {
       gridContainer.innerHTML =
         "<div style='grid-column: 1/-1; text-align: center; padding: 50px; opacity: 0.5;'>Nenhum evento localizado.</div>";
       return;
     }
 
-    eventos.forEach((evento) => {
+    listaEventos.forEach((evento) => {
       const dataFormatada =
         new Date(evento.data_evento).toLocaleDateString("pt-BR") +
         " " +
@@ -240,14 +233,10 @@ async function carregarEventos() {
           hour: "2-digit",
           minute: "2-digit",
         });
-      const tagImagem = evento.imagem
-        ? `<img src="${evento.imagem}" alt="${evento.nome}">`
-        : "";
+      const tagImagem = evento.imagem ? `<img src="${evento.imagem}" alt="${evento.nome}">` : "";
       const classeNoImage = evento.imagem ? "" : "no-image";
       const objCategoria = categorias.find((c) => c.id === evento.categoria_id);
-      const nomeCategoria = objCategoria
-        ? objCategoria.nome
-        : `ID: ${evento.categoria_id}`;
+      const nomeCategoria = objCategoria ? objCategoria.nome : `ID: ${evento.categoria_id}`;
 
       gridContainer.innerHTML += `
         <div class="event-card">
@@ -283,7 +272,7 @@ async function carregarEventos() {
     console.error("Erro ao carregar eventos:", error);
   }
 
-  await popularFiltroEventosPedidos(idEventoAtual ?? "");
+  popularFiltroEventosPedidos(idEventoAtual ?? "");
 }
 
 async function fazerUploadImagem(input) {
@@ -291,9 +280,7 @@ async function fazerUploadImagem(input) {
   if (!file) return;
 
   const formEvento = document.getElementById("form-evento");
-  const btnSalvar = formEvento
-    ? formEvento.querySelector('button[type="submit"]')
-    : null;
+  const btnSalvar = formEvento ? formEvento.querySelector('button[type="submit"]') : null;
   const statusLabel = document.getElementById("upload-status");
 
   if (statusLabel) {
@@ -312,7 +299,7 @@ async function fazerUploadImagem(input) {
     const response = await fetch(`${window.API_URL}/upload/`, {
       method: "POST",
       body: formData,
-      headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      headers: getAuthHeaders()
     });
     const resultado = await response.json();
 
@@ -356,16 +343,13 @@ async function prepararEdicaoEvento(id) {
     document.getElementById("evento-nome").value = evento.nome;
     document.getElementById("evento-categoria").value = evento.categoria_id;
     if (evento.data_evento)
-      document.getElementById("evento-data").value =
-        evento.data_evento.substring(0, 16);
+      document.getElementById("evento-data").value = evento.data_evento.substring(0, 16);
     document.getElementById("evento-local").value = evento.local;
     document.getElementById("evento-valor").value = evento.valor_passagem;
     document.getElementById("evento-imagem-url").value = evento.imagem || "";
 
     const formEvento = document.getElementById("form-evento");
-    const btnSalvar = formEvento
-      ? formEvento.querySelector('button[type="submit"]')
-      : null;
+    const btnSalvar = formEvento ? formEvento.querySelector('button[type="submit"]') : null;
     if (btnSalvar) {
       btnSalvar.disabled = false;
       btnSalvar.style.opacity = "1";
@@ -389,30 +373,21 @@ async function deletarEvento(id) {
   }
 }
 
-async function popularFiltroEventosPedidos(idSelecionado) {
+function popularFiltroEventosPedidos(idSelecionado) {
   const selectFiltro = document.getElementById("filtro-pedidos-evento");
   if (!selectFiltro) return;
 
-  try {
-    const response = await fetch(`${window.API_URL}/eventos/listar`, {
-      headers: getAuthHeaders(),
-    });
-    if (!response.ok) return;
-    const eventos = await response.json();
-
-    selectFiltro.innerHTML = "";
-    if (eventos.length === 0) {
-      selectFiltro.innerHTML = `<option value="">Nenhum evento cadastrado</option>`;
-      return;
-    }
-
-    eventos.forEach((ev) => {
-      selectFiltro.innerHTML += `<option value="${ev.id}">${ev.nome}</option>`;
-    });
-    selectFiltro.value = idSelecionado;
-  } catch (error) {
-    console.error("Erro ao popular filtro de eventos em pedidos:", error);
+  selectFiltro.innerHTML = "";
+  const listaEventos = window.cacheEventos || [];
+  if (listaEventos.length === 0) {
+    selectFiltro.innerHTML = `<option value="">Nenhum evento cadastrado</option>`;
+    return;
   }
+
+  listaEventos.forEach((ev) => {
+    selectFiltro.innerHTML += `<option value="${ev.id}">${ev.nome}</option>`;
+  });
+  selectFiltro.value = idSelecionado;
 }
 
 async function carregarPedidos(eventoId = null) {
@@ -421,41 +396,36 @@ async function carregarPedidos(eventoId = null) {
     paginaAtualPedidos = 1;
   }
 
-  exibirMensagemTabelaPedidos(
-    "<span class='spinner-inline'></span> Buscando pedidos atualizados...",
-  );
+  exibirMensagemTabelaPedidos("<span class='spinner-inline'></span> Buscando pedidos atualizados...");
 
+  const listaEventos = window.cacheEventos || [];
   if (!idEventoAtual) {
-    try {
-      const resEventos = await fetch(`${window.API_URL}/eventos/listar`, {
-        headers: getAuthHeaders(),
-      });
-      if (resEventos.ok) {
-        const eventos = await resEventos.json();
-        if (eventos.length > 0) {
-          idEventoAtual = eventos[0].id;
-        } else {
-          exibirMensagemTabelaPedidos(
-            "Nenhum evento cadastrado para carregar pedidos.",
-          );
-          return;
+    if (listaEventos.length > 0) {
+      idEventoAtual = listaEventos[0].id;
+    } else {
+      try {
+        const resEventos = await fetch(`${window.API_URL}/eventos/listar`, { headers: getAuthHeaders() });
+        if (resEventos.ok) {
+          window.cacheEventos = await resEventos.json();
+          if (window.cacheEventos.length > 0) idEventoAtual = window.cacheEventos[0].id;
         }
+      } catch (error) {
+        console.error("Erro ao buscar evento inicial:", error);
       }
-    } catch (error) {
-      console.error("Erro ao buscar evento inicial para pedidos:", error);
-      exibirMensagemTabelaPedidos("Erro ao inicializar filtro de eventos.");
-      return;
     }
   }
 
-  await popularFiltroEventosPedidos(idEventoAtual);
+  if (!idEventoAtual) {
+    exibirMensagemTabelaPedidos("Nenhum evento cadastrado para carregar pedidos.");
+    return;
+  }
+
+  popularFiltroEventosPedidos(idEventoAtual);
 
   try {
     const response = await fetch(
       `${window.API_URL}/pedidos/evento/${idEventoAtual}?pagina=${paginaAtualPedidos}&limite=${pedidosPorPagina}`,
-      {
-        headers: getAuthHeaders(),
-      },
+      { headers: getAuthHeaders() },
     );
 
     if (response.status === 404) {
@@ -473,22 +443,18 @@ async function carregarPedidos(eventoId = null) {
     mostrarPaginaPedidos();
   } catch (error) {
     console.error("Erro ao buscar pedidos no servidor:", error);
-    exibirMensagemTabelaPedidos(
-      "Erro crítico ao se comunicar com o servidor.",
-      "#ff4d4d",
-    );
+    exibirMensagemTabelaPedidos("Erro crítico ao se comunicar com o servidor.", "#ff4d4d");
   }
 }
 
 async function carregarDashboard(canal_venda = "", periodo = "") {
   console.log("[DASHBOARD] Carregando dashboard...");
-  console.trace("[DASHBOARD] Stack trace:");
   try {
     const query = new URLSearchParams();
     if (canal_venda) query.append("canal_venda", canal_venda);
     if (periodo) query.append("periodo", periodo);
 
-    const url = `${API_URL}/pedidos/dashboard?${query.toString()}`;
+    const url = `${window.API_URL}/pedidos/dashboard?${query.toString()}`;
     const response = await fetch(url, {
       headers: getAuthHeaders(),
     });
@@ -501,27 +467,17 @@ async function carregarDashboard(canal_venda = "", periodo = "") {
     dashboardFiltroCanal = canal_venda || "";
     dashboardFiltroPeriodo = periodo || "";
     dashboardPaginaAtual = 1;
-    dashboardTotalPaginas =
-      Math.ceil(eventosDashboard.length / dashboardPorPagina) || 1;
+    dashboardTotalPaginas = Math.ceil(eventosDashboard.length / dashboardPorPagina) || 1;
 
     atualizarDashboardMetrics(dados.totals || {});
     popularFiltrosDashboard(canal_venda, periodo);
     renderizarDashboardEventos(eventosDashboard);
   } catch (error) {
     console.error("Erro ao carregar dashboard:", error);
-    atualizarDashboardMetrics({
-      total_vendas: 0,
-      ingressos_vendidos: 0,
-      eventos_com_venda: 0,
-    });
+    atualizarDashboardMetrics({ total_vendas: 0, ingressos_vendidos: 0, eventos_com_venda: 0 });
     renderizarDashboardEventos([]);
   }
 }
-
-let xhrExportacaoAtual = null;
-let intervaloProgressoExportacao = null;
-let nomeEventoExportacao = "";
-let nomeArquivoExportado = "";
 
 async function atualizarCheers() {
   if (!idEventoAtual) {
@@ -532,135 +488,93 @@ async function atualizarCheers() {
   console.log("[EXPORTACAO] Iniciando exportação...");
   exportacaoEmProgresso = true;
 
-  try {
-    const resEvento = await fetch(
-      `${window.API_URL}/eventos/listar`,
-      {
-        headers: getAuthHeaders(),
-      }
-    );
-    if (!resEvento.ok) throw new Error("Erro ao buscar evento");
-    const eventos = await resEvento.json();
-    const eventoAtual = eventos.find((e) => e.id === idEventoAtual);
-    
-    if (!eventoAtual) {
-      alert("Evento não encontrado!");
-      exportacaoEmProgresso = false;
-      return;
+  const listaEventos = window.cacheEventos || [];
+  const eventoAtual = listaEventos.find((e) => e.id === idEventoAtual);
+  
+  if (!eventoAtual) {
+    alert("Evento não encontrado localmente! Atualize a lista.");
+    exportacaoEmProgresso = false;
+    return;
+  }
+
+  // Escopo local puro: não precisa mais de variáveis globais de controle de cancelamento
+  const nomeEventoExportacao = eventoAtual.nome;
+  
+  exibirModalProgressoExportacao("Sincronizando com Cheers");
+  atualizarModalProgressoExportacao(10, "Iniciando sincronização com Cheers...");
+
+  let porcentagemSimulada = 10;
+  const intervaloProgressoExportacao = setInterval(() => {
+    if (porcentagemSimulada < 90) {
+      porcentagemSimulada += 5;
+      atualizarModalProgressoExportacao(
+        porcentagemSimulada,
+        `Exportando dados do evento: ${nomeEventoExportacao}... (${porcentagemSimulada}%)`,
+      );
     }
+  }, 800);
 
-    nomeEventoExportacao = eventoAtual.nome;
-    console.log("[EXPORTACAO] Evento encontrado:", nomeEventoExportacao);
-    
-    exibirModalProgresoExportacao("Sincronizando com Cheers");
-    atualizarModalProgresoExportacao(10, "Iniciando sincronização com Cheers...");
-
-    let porcentagemSimulada = 10;
-    intervaloProgressoExportacao = setInterval(() => {
-      if (porcentagemSimulada < 90) {
-        porcentagemSimulada += 5;
-        atualizarModalProgresoExportacao(
-          porcentagemSimulada,
-          `Exportando dados do evento: ${nomeEventoExportacao}... (${porcentagemSimulada}%)`
-        );
-      }
-    }, 800);
-
-    console.log("[EXPORTACAO] Chamando API de exportação...");
+  try {
     const response = await fetch(`${window.API_URL}/pedidos/exportar-planilha`, {
       method: "POST",
       headers: getAuthHeaders(),
-      body: JSON.stringify({
-        evento: nomeEventoExportacao,
-      }),
+      body: JSON.stringify({ evento: nomeEventoExportacao })
     });
 
     clearInterval(intervaloProgressoExportacao);
-    console.log("[EXPORTACAO] Resposta recebida, status:", response.status);
-    console.log("[EXPORTACAO] Headers:", response.headers);
-    console.log("[EXPORTACAO] Tipo de resposta:", response.type);
 
     if (response.ok) {
       const resultado = await response.json();
-      nomeArquivoExportado = resultado.nome_arquivo;
-      console.log("[EXPORTACAO] Arquivo exportado:", nomeArquivoExportado);
+      const nomeArquivoExportado = resultado.nome_arquivo;
       
-      atualizarModalProgresoExportacao(100, "Processamento completo!");
+      atualizarModalProgressoExportacao(100, "Processamento completo!");
 
       setTimeout(() => {
-        console.log("[EXPORTACAO] Mostrando resultado...");
         exibirResultadoExportacao(nomeArquivoExportado);
       }, 500);
     } else {
-      clearInterval(intervaloProgressoExportacao);
-      xhrExportacaoAtual = null;
       exportacaoEmProgresso = false;
-
       try {
         const erro = await response.json();
-        const mensagem =
-          erro.detail || "Erro ao exportar dados do Cheers. Verifique se o nome do evento existe no Cheers.";
-        alert(mensagem);
+        alert(erro.detail || "Erro ao exportar dados do Cheers. Verifique se o nome do evento existe no Cheers.");
       } catch (e) {
         alert("Erro ao exportar dados do Cheers.");
       }
-      fecharModalProgresoExportacao();
+      fecharModalProgressoExportacao();
     }
   } catch (error) {
-    console.error("[EXPORTACAO] Erro ao preparar exportação:", error);
     clearInterval(intervaloProgressoExportacao);
     exportacaoEmProgresso = false;
+    console.error("[EXPORTACAO] Erro ao preparar exportação:", error);
     alert("Erro ao preparar a sincronização com Cheers.");
-    fecharModalProgresoExportacao();
+    fecharModalProgressoExportacao();
   }
 }
 
-function exibirModalProgresoExportacao(titulo) {
-  console.log("[EXPORTACAO] Abrindo modal...");
+function exibirModalProgressoExportacao(titulo) {
   document.getElementById("titulo-progresso-export").textContent = titulo;
   document.getElementById("modal-progresso-exportacao").style.display = "flex";
 }
 
-function atualizarModalProgresoExportacao(porcentagem, mensagem) {
+function atualizarModalProgressoExportacao(porcentagem, mensagem) {
   const status = document.getElementById("status-progresso-export");
   if (status) status.textContent = mensagem;
 }
 
-function fecharModalProgresoExportacao() {
+function fecharModalProgressoExportacao() {
   document.getElementById("modal-progresso-exportacao").style.display = "none";
 
   const spinner = document.getElementById("loading-spinner-export");
-  if (spinner) {
-    spinner.style.display = "";
-  }
+  if (spinner) spinner.style.display = "";
 
   const txtTitulo = document.getElementById("titulo-progresso-export");
-  if (txtTitulo) {
-    txtTitulo.style.display = "";
-  }
+  if (txtTitulo) txtTitulo.style.display = "";
 
   const status = document.getElementById("status-progresso-export");
-  if (status) {
-    status.innerHTML = "Sincronizando com Cheers, por favor aguarde...";
-  }
+  if (status) status.innerHTML = "Sincronizando com Cheers, por favor aguarde...";
 
   const btnCancelar = document.getElementById("btn-cancelar-exportacao");
-  if (btnCancelar) {
-    btnCancelar.style.display = "";
-  }
-}
-
-function cancelarExportacao() {
-  if (xhrExportacaoAtual) {
-    xhrExportacaoAtual.abort();
-    xhrExportacaoAtual = null;
-  }
-  if (intervaloProgressoExportacao) {
-    clearInterval(intervaloProgressoExportacao);
-    intervaloProgressoExportacao = null;
-  }
-  fecharModalProgresoExportacao();
-  alert("Sincronização com Cheers cancelada.");
+  if (btnCancelar) btnCancelar.style.display = "";
 }
 
 function exibirResultadoExportacao(nomeArquivo) {
@@ -708,53 +622,43 @@ function exibirResultadoExportacao(nomeArquivo) {
 
 async function importarArquivoExportado(nomeArquivo) {
   console.log("[IMPORTACAO] Iniciando importação de arquivo exportado...");
-  fecharModalProgresoExportacao();
+  fecharModalProgressoExportacao();
   exportacaoEmProgresso = false;
 
   exibirModalProgresso("Importando Dados Exportados");
   atualizarModalProgresso(0, "Iniciando leitura do arquivo exportado...");
 
   let porcentagemSimulada = 0;
-
   const intervalo = setInterval(() => {
     if (porcentagemSimulada < 95) {
       porcentagemSimulada += 2;
       atualizarModalProgresso(
         porcentagemSimulada,
-        `Processando dados no banco de dados... (${porcentagemSimulada}%)`
+        `Processando dados no banco de dados... (${porcentagemSimulada}%)`,
       );
     }
   }, 500);
 
   try {
-    console.log("[IMPORTACAO] Solicitando arquivo do backend:", nomeArquivo);
-    
-    // Baixa arquivo do backend (que irá buscar do Supabase)
     const resArquivo = await fetch(`${window.API_URL}/pedidos/baixar-arquivo-exportado`, {
       method: "POST",
       headers: {
         ...getAuthHeaders(),
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({ nome_arquivo: nomeArquivo })
+      body: JSON.stringify({ nome_arquivo: nomeArquivo }),
     });
 
-    console.log("[IMPORTACAO] Status da resposta do backend:", resArquivo.status, resArquivo.statusText);
-    
     if (!resArquivo.ok) {
       const erroTexto = await resArquivo.text();
-      console.error("[IMPORTACAO] Erro ao baixar, resposta:", erroTexto);
       throw new Error(`Erro ${resArquivo.status} ao baixar arquivo: ${erroTexto}`);
     }
 
     const blobArquivo = await resArquivo.blob();
-    console.log("[IMPORTACAO] Arquivo baixado, tamanho:", blobArquivo.size);
 
     const xhr = new XMLHttpRequest();
     const formData = new FormData();
-    const file = new File([blobArquivo], nomeArquivo, {
-      type: "application/vnd.ms-excel",
-    });
+    const file = new File([blobArquivo], nomeArquivo, { type: "application/vnd.ms-excel" });
     formData.append("file", file);
     formData.append("evento_id", idEventoAtual);
 
@@ -768,7 +672,6 @@ async function importarArquivoExportado(nomeArquivo) {
       clearInterval(intervalo);
 
       if (xhr.status >= 200 && xhr.status < 300) {
-        console.log("[IMPORTACAO] Importação bem-sucedida");
         try {
           const resultado = JSON.parse(xhr.responseText);
 
@@ -796,21 +699,18 @@ async function importarArquivoExportado(nomeArquivo) {
             lucide.createIcons();
           }
 
-          console.log("[IMPORTACAO] Carregando dados atualizados...");
           carregarClientes(idEventoAtual);
           carregarPedidos(idEventoAtual);
 
           setTimeout(() => {
-            console.log("[IMPORTACAO] Fechando modal");
             fecharModalProgresso();
           }, 2500);
         } catch (e) {
-          console.error("[IMPORTACAO] Erro ao ler JSON de resposta:", e);
+          console.error("Erro ao ler JSON de resposta:", e);
           fecharModalProgresso();
           alert("Erro ao interpretar resposta do servidor.");
         }
       } else {
-        console.error("[IMPORTACAO] Erro no servidor, status:", xhr.status);
         fecharModalProgresso();
         alert("Erro no servidor ao importar arquivo.");
       }
@@ -818,17 +718,15 @@ async function importarArquivoExportado(nomeArquivo) {
 
     xhr.onerror = () => {
       clearInterval(intervalo);
-      console.error("[IMPORTACAO] Erro de rede");
       fecharModalProgresso();
       alert("Erro de rede ao importar arquivo.");
     };
 
-    console.log("[IMPORTACAO] Enviando arquivo para importação...");
     xhr.send(formData);
   } catch (error) {
     clearInterval(intervalo);
     fecharModalProgresso();
-    console.error("[IMPORTACAO] Erro ao baixar arquivo:", error);
+    console.error("Erro ao baixar arquivo:", error);
     alert("Erro ao baixar arquivo. Verifique se o arquivo existe.");
   }
 }

@@ -70,22 +70,18 @@ def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
 
             pagina.locator("p.side-event-title").first.click()
             
-            # --- NOVA VALIDAÇÃO DO EVENTO ---
             elemento_evento = pagina.locator("a.event-list-link", has_text=evento)
             
-            # Aguarda um momento para garantir que a lista de eventos carregou
             try:
                 elemento_evento.first.wait_for(state="attached", timeout=5000)
             except:
-                pass # Se não anexar em 5s, o count() abaixo validará
+                pass
 
             if elemento_evento.count() == 0:
                 raise ValueError(f"Evento '{evento}' não foi encontrado na sua conta do Cheers. Verifique o nome digitado.")
             
-            # Se passou na validação, clica no evento
             elemento_evento.click()
             print(f"[OK] Evento selecionado: {evento}")
-            # ---------------------------------
 
             pagina.locator("span", has_text="Ingressos").first.click()
             pagina.get_by_role("link", name="Gerenciar Ingressos").click()
@@ -94,7 +90,7 @@ def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
             pagina.locator("button", has_text="Exportar").click()
             pagina.locator("#advance-btn-small-step-alert").wait_for(state="visible")
 
-            with pagina.expect_download() as download_info:
+            with pagina.expect_download(timeout=60000) as download_info:
                 pagina.locator("#advance-btn-small-step-alert").click()
 
             download = download_info.value
@@ -122,7 +118,6 @@ def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
             return caminho_storage
 
         except ValueError as e_aviso:
-            # Captura o erro específico de validação de nome de evento
             print(f"[AVISO] {e_aviso}")
             raise e_aviso
         except Exception as error:

@@ -14,6 +14,12 @@ function exibirModalProgresso(titulo) {
 function fecharModalProgresso() {
   document.getElementById("modal-progresso-importacao").style.display = "none";
 
+  // CORREÇÃO: Garante que o texto de porcentagem volte a ficar visível na próxima importação
+  const txtPorcentagem = document.getElementById("porcentagem-progresso");
+  if (txtPorcentagem) {
+    txtPorcentagem.style.display = "";
+  }
+
   const btnCancelar = document.getElementById("btn-cancelar-importacao");
   if (btnCancelar) {
     btnCancelar.style.display = "";

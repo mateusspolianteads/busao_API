@@ -23,8 +23,8 @@ function mostrarPaginaClientes() {
           timeZone: "UTC",
         })
       : "---";
-    const clienteJson = JSON.stringify(cliente).replace(/"/g, "&quot;");
 
+    // CORREÇÃO: Passa apenas o ID do cliente para evitar quebras de aspas no HTML
     tabela.innerHTML += `
         <tr>
           <td><strong>${cliente.nome}</strong></td>
@@ -34,7 +34,7 @@ function mostrarPaginaClientes() {
           <td>${cliente.telefone || "---"}</td>
           <td><span class="status paid">Ativo</span></td>
           <td style="text-align: center;">
-            <button class="btn-edit-table" onclick="abrirModalEditar(${clienteJson})">
+            <button class="btn-edit-table" onclick="abrirModalEditar(${cliente.id})">
               <i data-lucide="pencil" style="width: 16px;"></i>
             </button>
           </td>
@@ -52,10 +52,21 @@ function mostrarPaginaClientes() {
   if (document.getElementById("prev-page"))
     document.getElementById("prev-page").disabled = paginaAtualClientes === 1;
   if (document.getElementById("next-page"))
-    document.getElementById("next-page").disabled =
-      paginaAtualClientes === totalPaginas;
+    document.getElementById("next-page").disabled = paginaAtualClientes === totalPaginas;
 
   lucide.createIcons();
+}
+
+// CORREÇÃO: Busca o objeto do cliente de forma segura no array global usando o ID recebido
+function abrirModalEditar(clienteId) {
+  const cliente = clientes.find(c => c.id === clienteId);
+  if (!cliente) return;
+
+  document.getElementById("edit-cliente-id").value = cliente.id;
+  document.getElementById("edit-nome").value = cliente.nome;
+  document.getElementById("edit-email").value = cliente.email;
+  document.getElementById("edit-telefone").value = cliente.telefone || "";
+  document.getElementById("modal-editar-cliente").style.display = "flex";
 }
 
 function exibirMensagemTabelaPedidos(mensagem, cor = "var(--text-dim)") {
@@ -133,6 +144,7 @@ function mostrarPaginaPedidos() {
 
   lucide.createIcons();
 }
+
 function popularFiltrosDashboard(canal_venda = "", periodo = "") {
   const selectCanal = document.getElementById("select-canal-venda-dashboard");
   const selectPeriodo = document.getElementById("select-periodo-dashboard");
@@ -234,6 +246,7 @@ function trocarPaginaDashboard(delta) {
   );
   renderizarDashboardEventos(eventosDashboard);
 }
+
 function trocarPagina(id) {
   console.log("[UI] Trocando para página:", id);
   document
@@ -254,13 +267,15 @@ function trocarPagina(id) {
     idEventoAtual = null;
     carregarEventos();
   }
+  
+  // CORREÇÃO: carregarPedidos agora roda restrito apenas à aba correta
   if (id === "pedidos") {
     if (!idEventoAtual) {
       exibirMensagemTabelaPedidos("Selecione um evento para ver os pedidos.");
       return;
     }
+    carregarPedidos(idEventoAtual);
   }
-  carregarPedidos(idEventoAtual);
 }
 
 function aplicarTema(theme) {

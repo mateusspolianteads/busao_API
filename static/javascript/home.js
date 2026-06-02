@@ -10,6 +10,7 @@
   const savedTheme = localStorage.getItem("theme") || "dark";
   aplicarTema(savedTheme);
 
+  // --- IMPORTAÇÃO DE PLANILHA ---
   const fileInputClientes = document.getElementById("file-input");
   if (fileInputClientes) {
     fileInputClientes.addEventListener("change", (e) =>
@@ -22,6 +23,7 @@
     fileInputPedidos.style.display = "none";
   }
 
+  // --- FORMULÁRIO: EDITAR CLIENTE ---
   const formEditarCliente = document.getElementById("form-editar-cliente");
   if (formEditarCliente) {
     formEditarCliente.addEventListener("submit", async (e) => {
@@ -33,9 +35,7 @@
         telefone: document.getElementById("edit-telefone").value,
       };
 
-      const btnSalvar = formEditarCliente.querySelector(
-        'button[type="submit"]',
-      );
+      const btnSalvar = formEditarCliente.querySelector('button[type="submit"]');
       const txtOriginal = btnSalvar ? btnSalvar.innerHTML : "";
       if (btnSalvar) {
         btnSalvar.disabled = true;
@@ -50,7 +50,7 @@
         });
 
         if (!response.ok) throw new Error();
-        alert("Cliente updated com sucesso!");
+        alert("Cliente atualizado com sucesso!");
         fecharModalEditar();
         carregarClientes();
       } catch (error) {
@@ -65,6 +65,7 @@
     });
   }
 
+  // --- FORMULÁRIO: CADASTRAR/EDITAR EVENTO ---
   const formEvento = document.getElementById("form-evento");
   if (formEvento) {
     formEvento.addEventListener("submit", async (e) => {
@@ -74,14 +75,10 @@
 
       const dadosEvento = {
         nome: document.getElementById("evento-nome").value,
-        categoria_id: parseInt(
-          document.getElementById("evento-categoria").value,
-        ),
+        categoria_id: parseInt(document.getElementById("evento-categoria").value),
         data_evento: new Date(data_input).toISOString(),
         local: document.getElementById("evento-local").value,
-        valor_passagem: parseFloat(
-          document.getElementById("evento-valor").value,
-        ),
+        valor_passagem: parseFloat(document.getElementById("evento-valor").value),
         imagem: document.getElementById("evento-imagem-url").value || null,
       };
 
@@ -120,46 +117,59 @@
     });
   }
 
+  // --- PAGINAÇÃO: CLIENTES ---
   const prevBtn = document.getElementById("prev-page");
   const nextBtn = document.getElementById("next-page");
-  if (prevBtn)
+  if (prevBtn) {
     prevBtn.addEventListener("click", () => {
       if (paginaAtualClientes > 1) {
         paginaAtualClientes--;
         carregarClientes();
       }
     });
-
-  if (nextBtn)
+  }
+  if (nextBtn) {
     nextBtn.addEventListener("click", () => {
       const totalPaginas = Math.ceil(totalClientesBanco / clientesPorPagina);
-
       if (paginaAtualClientes < totalPaginas) {
         paginaAtualClientes++;
         carregarClientes();
       }
     });
+  }
 
+  // --- PAGINAÇÃO: PEDIDOS ---
   const prevBtnPed = document.getElementById("prev-page-pedidos");
   const nextBtnPed = document.getElementById("next-page-pedidos");
-
-  if (prevBtnPed)
+  if (prevBtnPed) {
     prevBtnPed.addEventListener("click", () => {
       if (paginaAtualPedidos > 1) {
         paginaAtualPedidos--;
-        carregarPedidos();
+        carregarPedidos(); // Controla estritamente os pedidos agora
       }
     });
-  if (nextBtnPed)
+  }
+  if (nextBtnPed) {
     nextBtnPed.addEventListener("click", () => {
       const totalPaginas = Math.ceil(totalPedidosBanco / pedidosPorPagina);
-
       if (paginaAtualPedidos < totalPaginas) {
         paginaAtualPedidos++;
         carregarPedidos();
       }
     });
+  }
 
+  // --- PAGINAÇÃO: DASHBOARD ---
+  const prevBtnDash = document.getElementById("prev-page-dashboard");
+  const nextBtnDash = document.getElementById("next-page-dashboard");
+  if (prevBtnDash) {
+    prevBtnDash.addEventListener("click", () => trocarPaginaDashboard(-1));
+  }
+  if (nextBtnDash) {
+    nextBtnDash.addEventListener("click", () => trocarPaginaDashboard(1));
+  }
+
+  // --- FILTROS E SELETORES ---
   const selectFiltroPedidos = document.getElementById("filtro-pedidos-evento");
   if (selectFiltroPedidos) {
     selectFiltroPedidos.addEventListener("change", (e) => {
@@ -168,27 +178,25 @@
     });
   }
 
-  const selectCanalVenda = document.getElementById(
-    "select-canal-venda-dashboard",
-  );
+  const selectCanalVenda = document.getElementById("select-canal-venda-dashboard");
   const selectPeriodo = document.getElementById("select-periodo-dashboard");
 
-  if (selectCanalVenda)
+  if (selectCanalVenda) {
     selectCanalVenda.addEventListener("change", () => {
       carregarDashboard(selectCanalVenda.value, selectPeriodo?.value || "");
     });
-
-  if (selectPeriodo)
+  }
+  if (selectPeriodo) {
     selectPeriodo.addEventListener("change", () => {
       carregarDashboard(selectCanalVenda?.value || "", selectPeriodo.value);
     });
+  }
 
+  // --- ALTERNADOR DE TEMA ---
   const themeBtn = document.getElementById("theme-toggle");
   if (themeBtn) {
     themeBtn.addEventListener("click", () => {
-      const novoTema = document.body.classList.contains("light-mode")
-        ? "dark"
-        : "light";
+      const novoTema = document.body.classList.contains("light-mode") ? "dark" : "light";
       localStorage.setItem("theme", novoTema);
       aplicarTema(novoTema);
     });

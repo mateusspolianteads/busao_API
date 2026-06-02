@@ -461,6 +461,7 @@
     </div>
   </div>
 
+  <!-- MODAL DE EXPORTAÇÃO COMPACTADO E DIRETO -->
   <div id="modal-progresso-exportacao" class="modal-overlay" style="display: none; z-index: 9999">
     <div class="modal-content" style="max-width: 450px; text-align: center; padding: 40px 30px">
       <div style="
@@ -485,24 +486,8 @@
       <p id="status-progresso-export" style="color: #666; font-size: 14px; margin-bottom: 10px">
         Sincronizando com Cheers, por favor aguarde...
       </p>
-
-      <button type="button" id="btn-cancelar-exportacao" onclick="cancelarExportacao()" style="
-            margin-top: 25px;
-            padding: 11px 20px;
-            background-color: #ef4444;
-            color: white;
-            border: none;
-            border-radius: 6px;
-            font-size: 14px;
-            font-weight: 600;
-            cursor: pointer;
-            width: 100%;
-            font-family: inherit;
-            transition: background 0.2s, transform 0.1s;
-          " onmouseover="this.style.backgroundColor='#dc2626'" onmouseout="this.style.backgroundColor='#ef4444'"
-        onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'">
-        Cancelar Exportação
-      </button>
+      
+      <!-- O botão de cancelar exportação foi removido daqui pois o fluxo agora ocorre em etapa única no servidor -->
     </div>
   </div>
 
