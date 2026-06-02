@@ -1,4 +1,5 @@
 ﻿document.addEventListener("DOMContentLoaded", () => {
+  console.log("[HOME] DOMContentLoaded disparado...");
   if (!token) {
     window.location.href = "login.html";
     return;
@@ -193,6 +194,8 @@
     });
   }
 
+  console.log("[HOME] Início do carregamento de dados...");
   carregarEventos();
   carregarDashboard();
+  console.log("[HOME] DOMContentLoaded finalizado");
 });

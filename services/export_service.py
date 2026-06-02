@@ -1,0 +1,138 @@
+import os
+import re
+import tempfile
+import unicodedata
+from playwright.sync_api import sync_playwright
+from supabase import create_client
+
+def _bloquear_recursos(contexto):
+    def handler(route):
+        if route.request.resource_type in ["image", "media", "font"]:
+            route.abort()
+        else:
+            route.continue_()
+    contexto.route("**/*", handler)
+
+def _fazer_login(pagina, cpf, senha):
+    for tentativa in range(3):
+        try:
+            print(f"[INFO] Tentativa login {tentativa + 1}")
+            pagina.goto("https://cheers.com.br/", wait_until="domcontentloaded")
+            
+            pagina.locator("#login-btn").click(timeout=8000)
+            pagina.locator("#email-input").fill(cpf, timeout=8000)
+            
+            pagina.locator("form").get_by_role("button", name="Entrar").click(timeout=8000)
+            pagina.locator("form").get_by_role("button", name="Prefiro entrar com senha").click(timeout=8000)
+            
+            pagina.get_by_test_id("password").fill(senha)
+            pagina.locator("form").get_by_role("button", name="Entrar").click(timeout=8000)
+            
+            pagina.get_by_test_id("entityManager").wait_for(state="visible", timeout=15000)
+            print("[OK] Login realizado")
+            return
+        except Exception as e:
+            print(f"[WARN] Falha login: {e}")
+            pagina.goto("https://cheers.com.br/", wait_until="domcontentloaded")
+    
+    raise Exception("Login falhou após 3 tentativas")
+
+def _limpar_nome_arquivo(texto: str) -> str:
+    texto = unicodedata.normalize('NFKD', texto).encode('ascii', 'ignore').decode('utf-8')
+    texto = texto.replace(' ', '_')
+    texto = re.sub(r'[^a-zA-Z0-9_\-\.]', '', texto)
+    return texto
+
+def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
+    navegador = None
+    nome_limpo = _limpar_nome_arquivo(evento)
+    nome_arquivo = f"{nome_limpo}.xls"
+    
+    caminho_temporario_seguro = os.path.join(tempfile.gettempdir(), nome_arquivo)
+
+    with sync_playwright() as p:
+        try:
+            navegador = p.chromium.launch(headless=True, args=["--start-maximized"])
+            contexto = navegador.new_context(
+                viewport={"width": 1280, "height": 720},
+                accept_downloads=True
+            )
+            
+            _bloquear_recursos(contexto)
+            pagina = contexto.new_page()
+            pagina.set_default_timeout(15000)
+
+            _fazer_login(pagina, cpf, senha)
+
+            pagina.get_by_test_id("entityManager").click()
+            pagina.get_by_role("menuitem", name="Meus Eventos Minhas Páginas Á").click()
+            pagina.locator("p.side-event-title").first.wait_for(state="visible")
+
+            pagina.locator("p.side-event-title").first.click()
+            
+            # --- NOVA VALIDAÇÃO DO EVENTO ---
+            elemento_evento = pagina.locator("a.event-list-link", has_text=evento)
+            
+            # Aguarda um momento para garantir que a lista de eventos carregou
+            try:
+                elemento_evento.first.wait_for(state="attached", timeout=5000)
+            except:
+                pass # Se não anexar em 5s, o count() abaixo validará
+
+            if elemento_evento.count() == 0:
+                raise ValueError(f"Evento '{evento}' não foi encontrado na sua conta do Cheers. Verifique o nome digitado.")
+            
+            # Se passou na validação, clica no evento
+            elemento_evento.click()
+            print(f"[OK] Evento selecionado: {evento}")
+            # ---------------------------------
+
+            pagina.locator("span", has_text="Ingressos").first.click()
+            pagina.get_by_role("link", name="Gerenciar Ingressos").click()
+            print("[OK] Tela ingressos aberta")
+
+            pagina.locator("button", has_text="Exportar").click()
+            pagina.locator("#advance-btn-small-step-alert").wait_for(state="visible")
+
+            with pagina.expect_download() as download_info:
+                pagina.locator("#advance-btn-small-step-alert").click()
+
+            download = download_info.value
+            
+            download.save_as(caminho_temporario_seguro)
+            print(f"[OK] Arquivo fixado temporariamente em: {caminho_temporario_seguro}")
+
+            supabase_url = os.getenv("SUPABASE_URL")
+            supabase_key = os.getenv("SUPABASE_KEY")
+
+            if not supabase_url or not supabase_key:
+                raise Exception("Configurações do Supabase ausentes no ambiente.")
+
+            supabase = create_client(supabase_url, supabase_key)
+            caminho_storage = f"exports_cheers/{nome_arquivo}"
+            
+            with open(caminho_temporario_seguro, "rb") as f:
+                supabase.storage.from_("uploads").upload(
+                    path=caminho_storage,
+                    file=f,
+                    file_options={"content-type": "application/vnd.ms-excel", "upsert": "true"}
+                )
+            print(f"[OK] Arquivo enviado ao Supabase Storage: {caminho_storage}")
+            
+            return caminho_storage
+
+        except ValueError as e_aviso:
+            # Captura o erro específico de validação de nome de evento
+            print(f"[AVISO] {e_aviso}")
+            raise e_aviso
+        except Exception as error:
+            print(f"[ERROR] Falha na automação: {error}")
+            raise error
+        finally:
+            if navegador:
+                navegador.close()
+                print("[INFO] Navegador fechado.")
+            
+            if os.path.exists(caminho_temporario_seguro):
+                os.remove(caminho_temporario_seguro)
+                print("[INFO] Arquivo temporário local deletado.")

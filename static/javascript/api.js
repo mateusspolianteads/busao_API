@@ -184,6 +184,8 @@ async function verClientesDoEvento(idEvento, nomeEvento, botao) {
 }
 
 async function carregarCategorias() {
+  console.log("[CATEGORIAS] Carregando categorias...");
+  console.trace("[CATEGORIAS] Stack trace:");
   try {
     const response = await fetch(`${window.API_URL}/categorias/listar`, {
       headers: getAuthHeaders(),
@@ -204,6 +206,8 @@ async function carregarCategorias() {
 }
 
 async function carregarEventos() {
+  console.log("[EVENTOS] Carregando eventos...");
+  console.trace("[EVENTOS] Stack trace:");
   const gridContainer = document.getElementById("tabela-eventos-body");
   if (gridContainer) {
     gridContainer.innerHTML =
@@ -477,6 +481,8 @@ async function carregarPedidos(eventoId = null) {
 }
 
 async function carregarDashboard(canal_venda = "", periodo = "") {
+  console.log("[DASHBOARD] Carregando dashboard...");
+  console.trace("[DASHBOARD] Stack trace:");
   try {
     const query = new URLSearchParams();
     if (canal_venda) query.append("canal_venda", canal_venda);
@@ -509,5 +515,320 @@ async function carregarDashboard(canal_venda = "", periodo = "") {
       eventos_com_venda: 0,
     });
     renderizarDashboardEventos([]);
+  }
+}
+
+let xhrExportacaoAtual = null;
+let intervaloProgressoExportacao = null;
+let nomeEventoExportacao = "";
+let nomeArquivoExportado = "";
+
+async function atualizarCheers() {
+  if (!idEventoAtual) {
+    alert("Selecione um evento antes de atualizar!");
+    return;
+  }
+
+  console.log("[EXPORTACAO] Iniciando exportação...");
+  exportacaoEmProgresso = true;
+
+  try {
+    const resEvento = await fetch(
+      `${window.API_URL}/eventos/listar`,
+      {
+        headers: getAuthHeaders(),
+      }
+    );
+    if (!resEvento.ok) throw new Error("Erro ao buscar evento");
+    const eventos = await resEvento.json();
+    const eventoAtual = eventos.find((e) => e.id === idEventoAtual);
+    
+    if (!eventoAtual) {
+      alert("Evento não encontrado!");
+      exportacaoEmProgresso = false;
+      return;
+    }
+
+    nomeEventoExportacao = eventoAtual.nome;
+    console.log("[EXPORTACAO] Evento encontrado:", nomeEventoExportacao);
+    
+    exibirModalProgresoExportacao("Sincronizando com Cheers");
+    atualizarModalProgresoExportacao(10, "Iniciando sincronização com Cheers...");
+
+    let porcentagemSimulada = 10;
+    intervaloProgressoExportacao = setInterval(() => {
+      if (porcentagemSimulada < 90) {
+        porcentagemSimulada += 5;
+        atualizarModalProgresoExportacao(
+          porcentagemSimulada,
+          `Exportando dados do evento: ${nomeEventoExportacao}... (${porcentagemSimulada}%)`
+        );
+      }
+    }, 800);
+
+    console.log("[EXPORTACAO] Chamando API de exportação...");
+    const response = await fetch(`${window.API_URL}/pedidos/exportar-planilha`, {
+      method: "POST",
+      headers: getAuthHeaders(),
+      body: JSON.stringify({
+        evento: nomeEventoExportacao,
+      }),
+    });
+
+    clearInterval(intervaloProgressoExportacao);
+    console.log("[EXPORTACAO] Resposta recebida, status:", response.status);
+    console.log("[EXPORTACAO] Headers:", response.headers);
+    console.log("[EXPORTACAO] Tipo de resposta:", response.type);
+
+    if (response.ok) {
+      const resultado = await response.json();
+      nomeArquivoExportado = resultado.nome_arquivo;
+      console.log("[EXPORTACAO] Arquivo exportado:", nomeArquivoExportado);
+      
+      atualizarModalProgresoExportacao(100, "Processamento completo!");
+
+      setTimeout(() => {
+        console.log("[EXPORTACAO] Mostrando resultado...");
+        exibirResultadoExportacao(nomeArquivoExportado);
+      }, 500);
+    } else {
+      clearInterval(intervaloProgressoExportacao);
+      xhrExportacaoAtual = null;
+      exportacaoEmProgresso = false;
+
+      try {
+        const erro = await response.json();
+        const mensagem =
+          erro.detail || "Erro ao exportar dados do Cheers. Verifique se o nome do evento existe no Cheers.";
+        alert(mensagem);
+      } catch (e) {
+        alert("Erro ao exportar dados do Cheers.");
+      }
+      fecharModalProgresoExportacao();
+    }
+  } catch (error) {
+    console.error("[EXPORTACAO] Erro ao preparar exportação:", error);
+    clearInterval(intervaloProgressoExportacao);
+    exportacaoEmProgresso = false;
+    alert("Erro ao preparar a sincronização com Cheers.");
+    fecharModalProgresoExportacao();
+  }
+}
+
+function exibirModalProgresoExportacao(titulo) {
+  console.log("[EXPORTACAO] Abrindo modal...");
+  document.getElementById("titulo-progresso-export").textContent = titulo;
+  document.getElementById("modal-progresso-exportacao").style.display = "flex";
+}
+
+function atualizarModalProgresoExportacao(porcentagem, mensagem) {
+  const status = document.getElementById("status-progresso-export");
+  if (status) status.textContent = mensagem;
+}
+
+function fecharModalProgresoExportacao() {
+  document.getElementById("modal-progresso-exportacao").style.display = "none";
+
+  const spinner = document.getElementById("loading-spinner-export");
+  if (spinner) {
+    spinner.style.display = "";
+  }
+
+  const txtTitulo = document.getElementById("titulo-progresso-export");
+  if (txtTitulo) {
+    txtTitulo.style.display = "";
+  }
+
+  const status = document.getElementById("status-progresso-export");
+  if (status) {
+    status.innerHTML = "Sincronizando com Cheers, por favor aguarde...";
+  }
+
+  const btnCancelar = document.getElementById("btn-cancelar-exportacao");
+  if (btnCancelar) {
+    btnCancelar.style.display = "";
+  }
+}
+
+function cancelarExportacao() {
+  if (xhrExportacaoAtual) {
+    xhrExportacaoAtual.abort();
+    xhrExportacaoAtual = null;
+  }
+  if (intervaloProgressoExportacao) {
+    clearInterval(intervaloProgressoExportacao);
+    intervaloProgressoExportacao = null;
+  }
+  fecharModalProgresoExportacao();
+  alert("Sincronização com Cheers cancelada.");
+}
+
+function exibirResultadoExportacao(nomeArquivo) {
+  const loadingSpinner = document.getElementById("loading-spinner-export");
+  const btnCancelar = document.getElementById("btn-cancelar-exportacao");
+  const txtTitulo = document.getElementById("titulo-progresso-export");
+  const statusProgresso = document.getElementById("status-progresso-export");
+
+  if (loadingSpinner) loadingSpinner.style.display = "none";
+  if (btnCancelar) btnCancelar.style.display = "none";
+  if (txtTitulo) txtTitulo.style.display = "none";
+
+  if (statusProgresso) {
+    statusProgresso.innerHTML = `
+      <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 16px; padding: 25px 0;">
+        <i data-lucide="check-circle" style="width: 64px; height: 64px; color: #10b981;"></i>
+        <span style="font-size: 1.2rem; font-weight: 700; color: #10b981;">Exportação Concluída!</span>
+        
+        <div style="width: 100%; text-align: left; background: #f3f4f6; padding: 12px; border-radius: 6px; margin: 10px 0;">
+          <span style="font-size: 0.85rem; color: #666; display: block; margin-bottom: 4px;">📄 Arquivo Exportado:</span>
+          <span style="font-size: 0.95rem; font-weight: 600; color: #333; word-break: break-all;">${nomeArquivo}</span>
+        </div>
+
+        <button id="btn-importar-exportado" onclick="importarArquivoExportado('${nomeArquivo}')" style="
+          margin-top: 15px;
+          padding: 11px 20px;
+          background-color: #10b981;
+          color: white;
+          border: none;
+          border-radius: 6px;
+          font-size: 14px;
+          font-weight: 600;
+          cursor: pointer;
+          width: 100%;
+          font-family: inherit;
+          transition: background 0.2s, transform 0.1s;
+        " onmouseover="this.style.backgroundColor='#059669'" onmouseout="this.style.backgroundColor='#10b981'" onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'">
+          Importar Arquivo
+        </button>
+      </div>
+    `;
+    lucide.createIcons();
+  }
+}
+
+async function importarArquivoExportado(nomeArquivo) {
+  console.log("[IMPORTACAO] Iniciando importação de arquivo exportado...");
+  fecharModalProgresoExportacao();
+  exportacaoEmProgresso = false;
+
+  exibirModalProgresso("Importando Dados Exportados");
+  atualizarModalProgresso(0, "Iniciando leitura do arquivo exportado...");
+
+  let porcentagemSimulada = 0;
+
+  const intervalo = setInterval(() => {
+    if (porcentagemSimulada < 95) {
+      porcentagemSimulada += 2;
+      atualizarModalProgresso(
+        porcentagemSimulada,
+        `Processando dados no banco de dados... (${porcentagemSimulada}%)`
+      );
+    }
+  }, 500);
+
+  try {
+    console.log("[IMPORTACAO] Solicitando arquivo do backend:", nomeArquivo);
+    
+    // Baixa arquivo do backend (que irá buscar do Supabase)
+    const resArquivo = await fetch(`${window.API_URL}/pedidos/baixar-arquivo-exportado`, {
+      method: "POST",
+      headers: {
+        ...getAuthHeaders(),
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ nome_arquivo: nomeArquivo })
+    });
+
+    console.log("[IMPORTACAO] Status da resposta do backend:", resArquivo.status, resArquivo.statusText);
+    
+    if (!resArquivo.ok) {
+      const erroTexto = await resArquivo.text();
+      console.error("[IMPORTACAO] Erro ao baixar, resposta:", erroTexto);
+      throw new Error(`Erro ${resArquivo.status} ao baixar arquivo: ${erroTexto}`);
+    }
+
+    const blobArquivo = await resArquivo.blob();
+    console.log("[IMPORTACAO] Arquivo baixado, tamanho:", blobArquivo.size);
+
+    const xhr = new XMLHttpRequest();
+    const formData = new FormData();
+    const file = new File([blobArquivo], nomeArquivo, {
+      type: "application/vnd.ms-excel",
+    });
+    formData.append("file", file);
+    formData.append("evento_id", idEventoAtual);
+
+    xhr.open("POST", `${window.API_URL}/pedidos/importar-planilha`);
+    const authHeaders = getAuthHeaders();
+    if (authHeaders.Authorization) {
+      xhr.setRequestHeader("Authorization", authHeaders.Authorization);
+    }
+
+    xhr.onload = () => {
+      clearInterval(intervalo);
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        console.log("[IMPORTACAO] Importação bem-sucedida");
+        try {
+          const resultado = JSON.parse(xhr.responseText);
+
+          const txtPorcentagem = document.getElementById("porcentagem-progresso");
+          const btnCancelar = document.getElementById("btn-cancelar-importacao");
+          const spinner = document.getElementById("loading-spinner");
+          const txtTitulo = document.getElementById("titulo-progresso");
+
+          if (txtPorcentagem) txtPorcentagem.style.display = "none";
+          if (btnCancelar) btnCancelar.style.display = "none";
+          if (spinner) spinner.style.display = "none";
+          if (txtTitulo) txtTitulo.style.display = "none";
+
+          const statusProgresso = document.getElementById("status-progresso");
+          if (statusProgresso) {
+            statusProgresso.innerHTML = `
+              <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; padding: 25px 0;">
+                <i data-lucide="check-circle" style="width: 64px; height: 64px; color: #10b981;"></i>
+                <span style="font-size: 1.4rem; font-weight: 700; color: #10b981;">Importação Concluída!</span>
+                <span style="font-size: 0.95rem; opacity: 0.8; text-align: center; margin-top: 4px; color: #666;">
+                  ${resultado.total_clientes_novos} novos clientes e ${resultado.total_pedidos_criados} pedidos integrados.
+                </span>
+              </div>
+            `;
+            lucide.createIcons();
+          }
+
+          console.log("[IMPORTACAO] Carregando dados atualizados...");
+          carregarClientes(idEventoAtual);
+          carregarPedidos(idEventoAtual);
+
+          setTimeout(() => {
+            console.log("[IMPORTACAO] Fechando modal");
+            fecharModalProgresso();
+          }, 2500);
+        } catch (e) {
+          console.error("[IMPORTACAO] Erro ao ler JSON de resposta:", e);
+          fecharModalProgresso();
+          alert("Erro ao interpretar resposta do servidor.");
+        }
+      } else {
+        console.error("[IMPORTACAO] Erro no servidor, status:", xhr.status);
+        fecharModalProgresso();
+        alert("Erro no servidor ao importar arquivo.");
+      }
+    };
+
+    xhr.onerror = () => {
+      clearInterval(intervalo);
+      console.error("[IMPORTACAO] Erro de rede");
+      fecharModalProgresso();
+      alert("Erro de rede ao importar arquivo.");
+    };
+
+    console.log("[IMPORTACAO] Enviando arquivo para importação...");
+    xhr.send(formData);
+  } catch (error) {
+    clearInterval(intervalo);
+    fecharModalProgresso();
+    console.error("[IMPORTACAO] Erro ao baixar arquivo:", error);
+    alert("Erro ao baixar arquivo. Verifique se o arquivo existe.");
   }
 }

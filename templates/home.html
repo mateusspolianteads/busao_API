@@ -145,6 +145,10 @@
           </div>
 
           <div class="header-actions">
+            <button class="btn-import" onclick="atualizarCheers()">
+              <i data-lucide="refresh-cw"></i>
+              Atualizar Cheers
+            </button>
             <button class="btn-import" onclick="document.getElementById('file-input').click()">
               <i data-lucide="file-spreadsheet"></i>
               Importar Planilha
@@ -453,6 +457,51 @@
           " onmouseover="this.style.backgroundColor='#dc2626'" onmouseout="this.style.backgroundColor='#ef4444'"
         onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'">
         Cancelar Importação
+      </button>
+    </div>
+  </div>
+
+  <div id="modal-progresso-exportacao" class="modal-overlay" style="display: none; z-index: 9999">
+    <div class="modal-content" style="max-width: 450px; text-align: center; padding: 40px 30px">
+      <div style="
+            margin-bottom: 25px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+          ">
+        <div id="loading-spinner-export" style="
+              width: 50px;
+              height: 50px;
+              border: 4px solid #e2e8f0;
+              border-top: 4px solid var(--primary-color, #4f46e5);
+              border-radius: 50%;
+              animation: spin 1s linear infinite;
+            "></div>
+      </div>
+
+      <h2 id="titulo-progresso-export" style="margin-bottom: 10px; font-size: 22px">
+        Exportando Dados
+      </h2>
+      <p id="status-progresso-export" style="color: #666; font-size: 14px; margin-bottom: 10px">
+        Sincronizando com Cheers, por favor aguarde...
+      </p>
+
+      <button type="button" id="btn-cancelar-exportacao" onclick="cancelarExportacao()" style="
+            margin-top: 25px;
+            padding: 11px 20px;
+            background-color: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 100%;
+            font-family: inherit;
+            transition: background 0.2s, transform 0.1s;
+          " onmouseover="this.style.backgroundColor='#dc2626'" onmouseout="this.style.backgroundColor='#ef4444'"
+        onmousedown="this.style.transform='scale(0.98)'" onmouseup="this.style.transform='scale(1)'">
+        Cancelar Exportação
       </button>
     </div>
   </div>

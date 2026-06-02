@@ -1,6 +1,9 @@
 window.API_URL = (window.location.origin.includes("localhost") || window.location.origin.includes("127.0.0.1"))
   ? "http://127.0.0.1:8000"
   : "https://busao-api.onrender.com";
+
+window.SUPABASE_URL = "https://okazcozfvmvbkagxdwon.supabase.co";
+
 const token = localStorage.getItem("token");
 
 let clientes = [];
@@ -17,6 +20,7 @@ let categorias = [];
 let idEventoAtual = null;
 let xhrImportacaoAtual = null;
 let intervaloProgressoImportacao = null;
+let exportacaoEmProgresso = false;
 
 let vendedoresDashboard = [];
 let periodosDashboard = [];

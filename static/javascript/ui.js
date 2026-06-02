@@ -235,6 +235,7 @@ function trocarPaginaDashboard(delta) {
   renderizarDashboardEventos(eventosDashboard);
 }
 function trocarPagina(id) {
+  console.log("[UI] Trocando para página:", id);
   document
     .querySelectorAll(".tab-content")
     .forEach((c) => c.classList.remove("active"));
