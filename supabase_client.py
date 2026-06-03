@@ -10,7 +10,7 @@ from supabase import create_client
 
 #  1. deletar venv atual
 #  2. py -3.12 -m venv venv
-#  3. venv\\Scripts\\activate
+#  3. \venv\Scripts\activate
 #  4. pip install -r requirements.txt
 
 # - Criar arquivo .env na raiz:
