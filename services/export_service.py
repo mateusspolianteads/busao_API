@@ -33,24 +33,74 @@ def _fazer_login(pagina, cpf, senha):
     for tentativa in range(3):
         try:
             print(f"[INFO] Tentativa login {tentativa + 1}")
-            pagina.goto("https://cheers.com.br/", wait_until="domcontentloaded")
-            
-            pagina.locator("#login-btn").click(timeout=8000)
-            pagina.locator("#email-input").fill(cpf, timeout=8000)
-            
-            pagina.locator("form").get_by_role("button", name="Entrar").click(timeout=8000)
-            pagina.locator("form").get_by_role("button", name="Prefiro entrar com senha").click(timeout=8000)
-            
+
+            pagina.goto(
+                "https://cheers.com.br/",
+                wait_until="networkidle",
+                timeout=60000
+            )
+
+            pagina.wait_for_load_state("networkidle")
+
+            pagina.locator("#login-btn").wait_for(
+                state="visible",
+                timeout=30000
+            )
+
+            pagina.locator("#login-btn").click()
+
+            pagina.locator("#email-input").wait_for(
+                state="visible",
+                timeout=15000
+            )
+
+            pagina.locator("#email-input").fill(cpf)
+
+            pagina.locator(
+                "form"
+            ).get_by_role(
+                "button",
+                name="Entrar"
+            ).click()
+
+            pagina.locator(
+                "form"
+            ).get_by_role(
+                "button",
+                name="Prefiro entrar com senha"
+            ).click()
+
             pagina.get_by_test_id("password").fill(senha)
-            pagina.locator("form").get_by_role("button", name="Entrar").click(timeout=8000)
-            
-            pagina.get_by_test_id("entityManager").wait_for(state="visible", timeout=15000)
+
+            pagina.locator(
+                "form"
+            ).get_by_role(
+                "button",
+                name="Entrar"
+            ).click()
+
+            pagina.get_by_test_id(
+                "entityManager"
+            ).wait_for(
+                state="visible",
+                timeout=30000
+            )
+
             print("[OK] Login realizado")
             return
+
         except Exception as e:
             print(f"[WARN] Falha login: {e}")
-            pagina.goto("https://cheers.com.br/", wait_until="domcontentloaded")
-    
+
+            try:
+                pagina.goto(
+                    "https://cheers.com.br/",
+                    wait_until="networkidle",
+                    timeout=60000
+                )
+            except:
+                pass
+
     raise Exception("Login falhou após 3 tentativas")
 
 def _limpar_nome_arquivo(texto: str) -> str:
