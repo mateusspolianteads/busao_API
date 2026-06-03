@@ -38,7 +38,9 @@ async def processar_planilha_clientes_e_pedidos(
     pedidos_importados = 0
 
     # 1. Mapeamento de Clientes existentes
-    cpf_para_id_map = {c[0]: c[1] for c in db.query(Cliente.cpf, Cliente.id).all()}
+    # Nota: antes consultávamos todos os CPFs do banco — para bases grandes isso é custoso.
+    # Agora vamos buscar apenas os CPFs que aparecem na planilha (após limpar o dataframe),
+    # evitando carregar toda a tabela de clientes na memória.
 
     # Função auxiliar para garantir formato estrito de data texturizada (AAAA-MM-DD HH:MM:SS)
     def formatar_data_estrita(dt):
@@ -119,6 +121,16 @@ async def processar_planilha_clientes_e_pedidos(
     # 3. Processamento e inserção em lote de novos clientes
     df_validos = df[df["_cpf_limpo"].notna()]
     cpfs_unicos = df_validos["_cpf_limpo"].unique()
+    # Buscar no banco apenas os CPFs presentes na planilha
+    cpf_para_id_map = {}
+    if len(cpfs_unicos) > 0:
+        try:
+            rows = db.query(Cliente.cpf, Cliente.id).filter(Cliente.cpf.in_(list(cpfs_unicos))).all()
+            cpf_para_id_map = {c[0]: c[1] for c in rows}
+        except Exception:
+            # Em caso de falha, fallback para mapa vazio (seguimos com lógica padrão)
+            cpf_para_id_map = {}
+
     cpfs_novos = [cpf for cpf in cpfs_unicos if cpf not in cpf_para_id_map]
 
     if cpfs_novos:

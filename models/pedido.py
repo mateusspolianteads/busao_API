@@ -6,8 +6,8 @@ class Pedido(Base):
     __tablename__ = "pedidos"
 
     id = Column(Integer, primary_key=True, index=True)
-    cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=False)
-    evento_id = Column(Integer, ForeignKey("eventos.id"), nullable=False)
+    cliente_id = Column(Integer, ForeignKey("clientes.id"), nullable=False, index=True)
+    evento_id = Column(Integer, ForeignKey("eventos.id"), nullable=False, index=True)
 
     data_venda = Column(DateTime, nullable=False)
     status_pedido = Column(String, nullable=False)

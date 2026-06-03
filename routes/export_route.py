@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from services.export_service import exportar_ingressos
 from fastapi.responses import StreamingResponse
-from supabase import create_client
+from supabase_client import supabase
 import io
 
 router = APIRouter(prefix="/pedidos", tags=["Exportação"])
@@ -45,14 +45,6 @@ def exportar_ingressos_endpoint(payload: ExportarIngressosRequest):
 def baixar_arquivo_exportado(payload: BaixarArquivoExportadoRequest):
     """Baixa arquivo exportado do Supabase Storage e retorna para o cliente."""
     try:
-        supabase_url = os.getenv("SUPABASE_URL")
-        supabase_key = os.getenv("SUPABASE_KEY")
-        
-        if not supabase_url or not supabase_key:
-            raise HTTPException(status_code=500, detail="Configurações do Supabase ausentes no ambiente.")
-        
-        supabase = create_client(supabase_url, supabase_key)
-        
         # Caminho do arquivo no Supabase
         caminho = f"exports_cheers/{payload.nome_arquivo}"
         

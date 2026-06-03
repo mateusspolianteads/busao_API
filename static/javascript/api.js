@@ -104,9 +104,19 @@ async function carregarClientes(eventoId = null) {
   }
 
   const tabela = document.getElementById("tabela-clientes-body");
-  if (tabela) {
-    tabela.innerHTML =
-      "<tr><td colspan='7' style='text-align:center; padding: 30px; opacity: 0.7;'><span class='spinner-inline'></span> Buscando participantes...</td></tr>";
+    /* if (tabela) {
+      tabela.innerHTML =
+        "<tr><td colspan='7' style='text-align:center; padding: 30px; opacity: 0.7;'><span class='spinner-inline'></span> Buscando participantes...</td></tr>";
+    } */
+
+  if (idEventoAtual && clientesCache[idEventoAtual]) {
+    const paginaCache = clientesCache[idEventoAtual][paginaAtualClientes];
+    if (paginaCache && paginaCache.expires > Date.now()) {
+      clientes = paginaCache.clientes;
+      totalClientesBanco = paginaCache.total;
+      mostrarPaginaClientes();
+      return;
+    }
   }
 
   try {
@@ -136,6 +146,15 @@ async function carregarClientes(eventoId = null) {
       const nomeB = b && b.nome ? String(b.nome) : "";
       return nomeA.localeCompare(nomeB, "pt-BR", { sensitivity: "base" });
     });
+
+    if (idEventoAtual) {
+      clientesCache[idEventoAtual] = clientesCache[idEventoAtual] || {};
+      clientesCache[idEventoAtual][paginaAtualClientes] = {
+        clientes,
+        total: totalClientesBanco,
+        expires: Date.now() + clientesCacheTTL,
+      };
+    }
 
     mostrarPaginaClientes();
   } catch (error) {
@@ -233,7 +252,7 @@ async function carregarEventos() {
           hour: "2-digit",
           minute: "2-digit",
         });
-      const tagImagem = evento.imagem ? `<img src="${evento.imagem}" alt="${evento.nome}">` : "";
+      const tagImagem = evento.imagem ? `<img src="${evento.imagem}" alt="${evento.nome}" loading="lazy" decoding="async">` : "";
       const classeNoImage = evento.imagem ? "" : "no-image";
       const objCategoria = categorias.find((c) => c.id === evento.categoria_id);
       const nomeCategoria = objCategoria ? objCategoria.nome : `ID: ${evento.categoria_id}`;
@@ -396,8 +415,8 @@ async function carregarPedidos(eventoId = null) {
     paginaAtualPedidos = 1;
   }
 
-  exibirMensagemTabelaPedidos("<span class='spinner-inline'></span> Buscando pedidos atualizados...");
-
+/*   exibirMensagemTabelaPedidos("<span class='spinner-inline'></span> Buscando pedidos atualizados...");
+ */
   const listaEventos = window.cacheEventos || [];
   if (!idEventoAtual) {
     if (listaEventos.length > 0) {

@@ -4,6 +4,7 @@ from sqlalchemy import func
 from models.pedido import Pedido
 from models.evento import Evento
 from models.cliente import Cliente
+from utils.cache import cached
 
 
 def criar_pedido(db: Session, dados):
@@ -48,30 +49,35 @@ def listar_pedido_por_evento(
 ) -> dict:
     skip = (pagina - 1) * limite
 
-    total = db.query(Pedido).filter(Pedido.evento_id == evento_id).count()
+    @cached(ttl=5)
+    def _fetch(evento_id, pagina, limite):
+        total = db.query(Pedido).filter(Pedido.evento_id == evento_id).count()
 
-    resultados = (
-        db.query(
-            Pedido.id,
-            Pedido.data_venda,
-            Pedido.status_pedido,
-            Pedido.status_ingresso,
-            Pedido.lote,
-            Pedido.valor_lote,
-            Pedido.canal_venda,
-            Pedido.metodo_pagamento,
-            Pedido.transferido,
-            Pedido.aprovado,
-            Cliente.nome.label("cliente_nome"),
-            Evento.nome.label("evento_nome"),
+        resultados = (
+            db.query(
+                Pedido.id,
+                Pedido.data_venda,
+                Pedido.status_pedido,
+                Pedido.status_ingresso,
+                Pedido.lote,
+                Pedido.valor_lote,
+                Pedido.canal_venda,
+                Pedido.metodo_pagamento,
+                Pedido.transferido,
+                Pedido.aprovado,
+                Cliente.nome.label("cliente_nome"),
+                Evento.nome.label("evento_nome"),
+            )
+            .join(Cliente, Pedido.cliente_id == Cliente.id)
+            .join(Evento, Pedido.evento_id == Evento.id)
+            .filter(Pedido.evento_id == evento_id)
+            .offset(skip)
+            .limit(limite)
+            .all()
         )
-        .join(Cliente, Pedido.cliente_id == Cliente.id)
-        .join(Evento, Pedido.evento_id == Evento.id)
-        .filter(Pedido.evento_id == evento_id)
-        .offset(skip)
-        .limit(limite)
-        .all()
-    )
+        return total, resultados
+
+    total, resultados = _fetch(evento_id, pagina, limite)
 
     lista_pedidos = [
         {
@@ -105,53 +111,74 @@ def obter_dados_dashboard(db: Session, canal_venda: str = None, periodo: str = N
     else:
         periodo_expr = func.strftime("%Y-%m", Pedido.data_venda)
 
-    vendedor_query = (
-        db.query(Pedido.canal_venda)
-        .distinct()
-        .filter(Pedido.canal_venda != None)
-        .order_by(Pedido.canal_venda)
-    )
-    vendedores = [v[0] for v in vendedor_query.all() if v[0]]
+    # Cache dashboard aggregates for slightly longer TTL
+    @cached(ttl=10)
+    def _fetch_dashboard(canal_venda, periodo):
+        vendedor_query = (
+            db.query(Pedido.canal_venda)
+            .distinct()
+            .filter(Pedido.canal_venda != None)
+            .order_by(Pedido.canal_venda)
+        )
+        vendedores = [v[0] for v in vendedor_query.all() if v[0]]
 
-    periodo_query = db.query(periodo_expr).distinct().order_by(periodo_expr.desc())
-    periodos = [p[0] for p in periodo_query.all() if p[0]]
+        periodo_query = db.query(periodo_expr).distinct().order_by(periodo_expr.desc())
+        periodos = [p[0] for p in periodo_query.all() if p[0]]
 
-    base_query = db.query(Pedido).join(Evento)
+        base_query = db.query(Pedido).join(Evento)
 
-    if canal_venda:
-        base_query = base_query.filter(Pedido.canal_venda == canal_venda)
-    if periodo:
-        base_query = base_query.filter(periodo_expr == periodo)
+        if canal_venda:
+            base_query = base_query.filter(Pedido.canal_venda == canal_venda)
+        if periodo:
+            base_query = base_query.filter(periodo_expr == periodo)
 
-    totals = base_query.with_entities(
-        func.coalesce(func.sum(Pedido.valor_lote), 0.0),
-        func.count(Pedido.id),
-        func.count(func.distinct(Pedido.evento_id)),
-    ).first()
+        totals = base_query.with_entities(
+            func.coalesce(func.sum(Pedido.valor_lote), 0.0),
+            func.count(Pedido.id),
+            func.count(func.distinct(Pedido.evento_id)),
+        ).first()
 
-    total_vendas = float(totals[0] or 0)
-    ingressos_vendidos = int(totals[1] or 0)
-    eventos_com_venda = int(totals[2] or 0)
+        total_vendas = float(totals[0] or 0)
+        ingressos_vendidos = int(totals[1] or 0)
+        eventos_com_venda = int(totals[2] or 0)
 
-    eventos_query = db.query(
-        Evento.id.label("evento_id"),
-        Evento.nome.label("nome"),
-        func.count(Pedido.id).label("total_pedidos"),
-        func.coalesce(func.sum(Pedido.valor_lote), 0.0).label("total_vendas"),
-        func.max(Pedido.canal_venda).label("canal_venda"),
-        func.max(periodo_expr).label("periodo"),
-    ).join(Pedido, Pedido.evento_id == Evento.id)
+        eventos_query = db.query(
+            Evento.id.label("evento_id"),
+            Evento.nome.label("nome"),
+            func.count(Pedido.id).label("total_pedidos"),
+            func.coalesce(func.sum(Pedido.valor_lote), 0.0).label("total_vendas"),
+            func.max(Pedido.canal_venda).label("canal_venda"),
+            func.max(periodo_expr).label("periodo"),
+        ).join(Pedido, Pedido.evento_id == Evento.id)
 
-    if canal_venda:
-        eventos_query = eventos_query.filter(Pedido.canal_venda == canal_venda)
-    if periodo:
-        eventos_query = eventos_query.filter(periodo_expr == periodo)
+        if canal_venda:
+            eventos_query = eventos_query.filter(Pedido.canal_venda == canal_venda)
+        if periodo:
+            eventos_query = eventos_query.filter(periodo_expr == periodo)
 
-    eventos_result = (
-        eventos_query.group_by(Evento.id)
-        .order_by(func.sum(Pedido.valor_lote).desc())
-        .all()
-    )
+        eventos_result = (
+            eventos_query.group_by(Evento.id)
+            .order_by(func.sum(Pedido.valor_lote).desc())
+            .all()
+        )
+
+        return {
+            "vendedores": vendedores,
+            "periodos": periodos,
+            "total_vendas": total_vendas,
+            "ingressos_vendidos": ingressos_vendidos,
+            "eventos_com_venda": eventos_com_venda,
+            "eventos_result": eventos_result,
+        }
+
+    dashboard_data = _fetch_dashboard(canal_venda, periodo)
+
+    vendedores = dashboard_data["vendedores"]
+    periodos = dashboard_data["periodos"]
+    total_vendas = dashboard_data["total_vendas"]
+    ingressos_vendidos = dashboard_data["ingressos_vendidos"]
+    eventos_com_venda = dashboard_data["eventos_com_venda"]
+    eventos_result = dashboard_data["eventos_result"]
 
     eventos = [
         {

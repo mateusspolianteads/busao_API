@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends
-from database import SessionLocal
+from sqlalchemy.orm import Session
+from database import get_db
 from utils.auth import verify_token
 from services.pedido_service import listar_pedido_por_evento, obter_dados_dashboard
 
@@ -14,31 +15,16 @@ router = APIRouter(
 def listar_por_evento(
     evento_id: int,
     pagina: int = 1,
-    limite: int = 10
+    limite: int = 10,
+    db: Session = Depends(get_db),
 ):
-    db = SessionLocal()
-    try:
-        return listar_pedido_por_evento(
-            db=db, 
-            evento_id=evento_id, 
-            pagina=pagina, 
-            limite=limite
-        )
-    finally:
-        db.close()
+    return listar_pedido_por_evento(db=db, evento_id=evento_id, pagina=pagina, limite=limite)
 
 
 @router.get("/dashboard")
 def dashboard(
     canal_venda: str = None,
-    periodo: str = None
+    periodo: str = None,
+    db: Session = Depends(get_db),
 ):
-    db = SessionLocal()
-    try:
-        return obter_dados_dashboard(
-            db=db, 
-            canal_venda=canal_venda, 
-            periodo=periodo
-        )
-    finally:
-        db.close()
+    return obter_dados_dashboard(db=db, canal_venda=canal_venda, periodo=periodo)

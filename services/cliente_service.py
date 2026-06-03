@@ -2,6 +2,7 @@ from sqlalchemy.orm import Session
 from fastapi import HTTPException, status
 from models.cliente import Cliente
 from models.pedido import Pedido
+from utils.cache import cached
 
 def criar_cliente(db: Session, dados):
     cpf_existente = db.query(Cliente).filter(Cliente.cpf == dados.cpf).first()
@@ -61,21 +62,33 @@ def atualizar_cliente(db: Session, cliente_id: int, dados):
     return cliente
 
 def listar_clientes_por_evento(db, evento_id, pagina, limite, search):
+    # Cache page results for short TTL to make pagination fast for repeated requests
+    @cached(ttl=5)
+    def _fetch(evento_id, pagina, limite, search):
+        cliente_ids_subquery = (
+            db.query(Pedido.cliente_id)
+            .filter(Pedido.evento_id == evento_id)
+            .distinct()
+            .subquery()
+        )
 
-    query = (
-        db.query(Cliente)
-        .join(Pedido, Cliente.id == Pedido.cliente_id)
-        .filter(Pedido.evento_id == evento_id)
-        .distinct()
-    )
+        query = (
+            db.query(Cliente)
+            .join(cliente_ids_subquery, Cliente.id == cliente_ids_subquery.c.cliente_id)
+        )
 
-    if search:
-        query = query.filter(Cliente.nome.ilike(f"{search}%"))
+        if search:
+            query = query.filter(Cliente.nome.ilike(f"{search}%"))
 
-    total = query.count() 
+        total = query.count()
 
-    clientes = query.offset(
-        (pagina - 1) * limite
-    ).limit(limite).all()
+        clientes = (
+            query.order_by(Cliente.nome)
+            .offset((pagina - 1) * limite)
+            .limit(limite)
+            .all()
+        )
 
-    return clientes, total
+        return clientes, total
+
+    return _fetch(evento_id, pagina, limite, search)

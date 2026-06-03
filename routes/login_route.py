@@ -1,5 +1,6 @@
-from fastapi import APIRouter
-from database import SessionLocal
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+from database import get_db
 from schemas.login import LoginSchema
 from services.login_service import login_usuario
 
@@ -9,12 +10,5 @@ router = APIRouter(
 )
 
 @router.post("")
-def login(dados: LoginSchema):
-
-    db = SessionLocal()
-
-    try:
-        return login_usuario(db, dados)
-
-    finally:
-        db.close()
+def login(dados: LoginSchema, db: Session = Depends(get_db)):
+    return login_usuario(db, dados)

@@ -7,14 +7,14 @@
   <title>Dashboard | Busão do Rolê</title>
   <link rel="stylesheet" href="../static/css/home.css" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet" />
-  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://unpkg.com/lucide@latest" defer></script>
 </head>
 
 <body>
   <div class="dashboard-container">
     <aside class="sidebar">
       <div class="logo-box">
-        <img src="../static/img/logo_branca.png" alt="logo-busao-do-role" class="sidebar-logo" id="main-logo" />
+        <img src="../static/img/logo_branca.png" alt="logo-busao-do-role" class="sidebar-logo" id="main-logo" loading="lazy" decoding="async" />
       </div>
 
       <nav class="sidebar-nav">
@@ -511,13 +511,22 @@
     </div>
   </div>
 
-  <script src="../static/javascript/config.js"></script>
-  <script src="../static/javascript/api.js"></script>
-  <script src="../static/javascript/modais.js"></script>
-  <script src="../static/javascript/ui.js"></script>
-  <script src="../static/javascript/home.js"></script>
-  <script>
+  <script src="../static/javascript/config.js" defer></script>
+  <script src="../static/javascript/api.js" defer></script>
+  <script src="../static/javascript/modais.js" defer></script>
+  <script src="../static/javascript/ui.js" defer></script>
+  <script src="../static/javascript/home.js" defer></script>
+  <script defer>
     lucide.createIcons();
+  </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('/static/javascript/sw.js').catch(function (err) {
+          console.warn('ServiceWorker registration failed: ', err);
+        });
+      });
+    }
   </script>
 </body>
 

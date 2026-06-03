@@ -10,6 +10,8 @@ let clientes = [];
 let paginaAtualClientes = 1;
 const clientesPorPagina = 10;
 let totalClientesBanco = 0;
+const clientesCache = {};
+const clientesCacheTTL = 5000;
 
 let pedidos = [];
 let paginaAtualPedidos = 1;

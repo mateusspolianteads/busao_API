@@ -2,38 +2,24 @@ from fastapi import FastAPI
 from database import Base, engine
 from datetime import datetime
 
-print("Início:", datetime.now())
-print("usuarios", datetime.now())
-from routes import usuarios
-
-print("clientes", datetime.now())
-from routes import clientes
-
-print("eventos", datetime.now())
-from routes import eventos
-
-print("pedidos", datetime.now())
-from routes import pedidos
-
-print("categorias", datetime.now())
-from routes import categorias
-
-print("upload", datetime.now())
-from routes import upload
-
-print("importacao_route", datetime.now())
-from routes import importacao_route
-
-print("login_route", datetime.now())
-from routes import login_route
-
-print("export_route", datetime.now())
-from routes import export_route
-
-print("Rotas carregadas:", datetime.now())
+# Importação das rotas (agrupadas)
+from routes import (
+    usuarios,
+    clientes,
+    eventos,
+    pedidos,
+    categorias,
+    upload,
+    importacao_route,
+    login_route,
+    export_route,
+)
 
 
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.gzip import GZipMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi import Request
 
 from models.usuario import Usuario
 from models.cliente import Cliente
@@ -57,10 +43,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# GZip middleware para reduzir payloads de resposta
+app.add_middleware(GZipMiddleware, minimum_size=1000)
+
 # Cria tabelas
 Base.metadata.create_all(bind=engine)
 
 print("Tabelas verificadas:", datetime.now())
+
+# Serve arquivos estáticos com cache-control
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.middleware("http")
+async def add_cache_control(request: Request, call_next):
+    response = await call_next(request)
+    try:
+        if request.url.path.startswith("/static/"):
+            # cache por 7 dias
+            response.headers["Cache-Control"] = "public, max-age=604800, immutable"
+    except Exception:
+        pass
+    return response
 
 # Rotas
 app.include_router(usuarios.router)
