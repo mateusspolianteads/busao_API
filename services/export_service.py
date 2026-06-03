@@ -6,7 +6,6 @@ from datetime import datetime
 from playwright.sync_api import sync_playwright
 from supabase_client import supabase as supabase_client
 
-
 def _bloquear_recursos(contexto):
     def handler(route):
         try:
@@ -19,19 +18,17 @@ def _bloquear_recursos(contexto):
 
     contexto.route("**/*", handler)
 
-
 def _fazer_login(pagina, cpf, senha):
     for tentativa in range(1, 3):
-        # Define timeout dinâmico: 10s na primeira, 60s na segunda
-        timeout_val = 10000 if tentativa == 1 else 60000
+        timeout_val = 20000 if tentativa == 1 else 60000
 
         try:
-            print(
-                f"[INFO] Iniciando tentativa de login {tentativa} (timeout: {timeout_val}ms)..."
-            )
+            print(f"[INFO] Iniciando tentativa de login {tentativa} (timeout: {timeout_val}ms)...")
 
             pagina.goto(
-                "https://cheers.com.br/", wait_until="networkidle", timeout=timeout_val
+                "https://cheers.com.br/", 
+                wait_until="domcontentloaded", 
+                timeout=timeout_val
             )
 
             pagina.wait_for_selector("#login-btn", timeout=timeout_val)
@@ -43,9 +40,7 @@ def _fazer_login(pagina, cpf, senha):
             pagina.locator("form").get_by_role("button", name="Entrar").click()
 
             try:
-                pagina.get_by_text("Prefiro entrar com senha").click(
-                    timeout=timeout_val
-                )
+                pagina.get_by_text("Prefiro entrar com senha").click(timeout=timeout_val)
             except:
                 pass
 
@@ -61,13 +56,14 @@ def _fazer_login(pagina, cpf, senha):
             print(f"[WARN] Falha na tentativa {tentativa}: {e}")
             try:
                 pagina.goto(
-                    "https://cheers.com.br/", wait_until="networkidle", timeout=20000
+                    "https://cheers.com.br/", 
+                    wait_until="domcontentloaded", 
+                    timeout=20000
                 )
             except:
                 pass
 
     raise Exception("Login falhou após 2 tentativas")
-
 
 def _limpar_nome_arquivo(texto: str) -> str:
     texto = (
@@ -76,7 +72,6 @@ def _limpar_nome_arquivo(texto: str) -> str:
     texto = texto.replace(" ", "_")
     texto = re.sub(r"[^a-zA-Z0-9_\-\.]", "", texto)
     return texto
-
 
 def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
     nome_limpo = _limpar_nome_arquivo(evento)
@@ -97,12 +92,19 @@ def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
                     "--disable-extensions",
                     "--disable-setuid-sandbox",
                     "--disable-software-rasterizer",
+                    "--disable-blink-features=AutomationControlled",
                 ],
             )
             context = browser.new_context(
-                viewport={"width": 1280, "height": 720},
+                viewport={"width": 1366, "height": 768},
                 accept_downloads=True,
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+                locale="pt-BR",
+                timezone_id="America/Sao_Paulo",
+                extra_http_headers={
+                    "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
+                    "Referer": "https://www.google.com/",
+                }
             )
             _bloquear_recursos(context)
             page = context.new_page()
@@ -140,7 +142,7 @@ def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
 
             download = download_info.value
             download.save_as(caminho_temporario)
-            print(f"[OK] Arquivo salvo temporariamente: {caminho_temporario}")
+            print(f"[OK] Arquivo保存 temporariamente: {caminho_temporario}")
 
             caminho_storage = f"exports_cheers/{nome_arquivo}"
             print(f"[INFO] Iniciando upload para Supabase: {caminho_storage}")
