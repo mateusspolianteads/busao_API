@@ -84,39 +84,6 @@ def _fazer_login(pagina, cpf, senha):
         except Exception as e:
             print(f"[WARN] Falha tentativa {tentativa}: {e}", flush=True)
 
-            # --- SISTEMA DE EXTRAÇÃO DE TAGS E SCREENSHOT PARA DEBUG ---
-            try:
-                timestamp_erro = datetime.now().strftime("%Y%m%d_%H%M%S")
-                html_puro = pagina.content()
-                caminho_html = os.path.join(tempfile.gettempdir(), f"debug_tags_{timestamp_erro}.html")
-                with open(caminho_html, "w", encoding="utf-8") as f:
-                    f.write(html_puro)
-                
-                caminho_print = os.path.join(tempfile.gettempdir(), f"debug_print_{timestamp_erro}.png")
-                pagina.screenshot(path=caminho_print)
-                
-                with open(caminho_html, "rb") as f:
-                    supabase_client.storage.from_("uploads").upload(
-                        path=f"debug/tags_{timestamp_erro}.html",
-                        file=f,
-                        file_options={"content-type": "text/html", "upsert": "true"}
-                    )
-                
-                with open(caminho_print, "rb") as f:
-                    supabase_client.storage.from_("uploads").upload(
-                        path=f"debug/print_{timestamp_erro}.png",
-                        file=f,
-                        file_options={"content-type": "image/png", "upsert": "true"}
-                    )
-                
-                print(f"[DEBUG] Tags HTML salvas no Supabase em: debug/tags_{timestamp_erro}.html", flush=True)
-                print(f"[DEBUG] Print da tela salvo no Supabase em: debug/print_{timestamp_erro}.png", flush=True)
-                
-                if os.path.exists(caminho_html): os.remove(caminho_html)
-                if os.path.exists(caminho_print): os.remove(caminho_print)
-            except Exception as erro_debug:
-                print(f"[ERROR] Não foi possível extrair o HTML de debug: {erro_debug}", flush=True)
-
             try:
                 pagina.context.clear_cookies()
                 pagina.wait_for_timeout(2000)
@@ -148,9 +115,7 @@ def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
                     "--disable-dev-shm-usage",
                     "--disable-gpu",
                     "--disable-extensions",
-                    # Remove a propriedade 'navigator.webdriver' nativa do Chromium
                     "--disable-blink-features=AutomationControlled",
-                    # Evita o bloqueio por falta de compartilhamento de janelas virtuais
                     "--disable-infobars",
                     "--ignore-certificate-errors"
                 ],
@@ -171,25 +136,14 @@ def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
 
             # 3. Scripts de Injeção Avançada (Garante que propriedades do JS não dedurem o Headless no Render)
             context.add_init_script("""
-                // Sobrescreve o webdriver para undefined de forma definitiva
                 Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-                
-                // Força a existência do objeto Chrome falso que os sites usam para checar consistência
                 window.chrome = { runtime: {} };
-                
-                // Mocka lista de plugins comuns para evitar assinaturas vazias comuns em instâncias de nuvem
                 Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-                
-                // Alinha as linguagens do navegador
                 Object.defineProperty(navigator, 'languages', { get: () => ['pt-BR', 'pt', 'en-US', 'en'] });
             """)
 
             page = context.new_page()
             page.set_default_timeout(60000)
-
-            # Captura logs de erros de execução internos do próprio site (ajuda a monitorar requisições bloqueadas)
-            page.on("pageerror", lambda exc: print(f"[BROWSER EXCEPTION] {exc}", flush=True))
-            page.on("console", lambda msg: print(f"[BROWSER CONSOLE] {msg.text}" if msg.type == "error" else "", end="", flush=True))
 
             # Executa o fluxo de login camuflado
             _fazer_login(page, cpf, senha)
