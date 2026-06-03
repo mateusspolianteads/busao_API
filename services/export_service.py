@@ -12,6 +12,7 @@ def _fazer_login(pagina, cpf, senha):
         try:
             print(f"[INFO] Tentativa login {tentativa}", flush=True)
 
+            # Abre a página inicial
             pagina.goto(
                 "https://cheers.com.br/",
                 wait_until="domcontentloaded",
@@ -20,41 +21,50 @@ def _fazer_login(pagina, cpf, senha):
 
             pagina.wait_for_timeout(2500)
 
-            login_btn = pagina.locator("#login-btn")
+            # 1. Clica no botão de Entrar (Mobile/Responsivo conforme o HTML que você mandou)
+            # Usamos o ID específico e deixamos o ID antigo como fallback caso mude o tamanho da tela
+            login_btn = pagina.locator("#login-btn-mobile, #login-btn").first
             login_btn.wait_for(timeout=30000)
             login_btn.click()
 
-            email = pagina.locator("#email-input")
+            # 2. Preenche o campo de e-mail/CPF
+            email = pagina.locator("#email-input, input[placeholder*='CPF']").first
             email.wait_for(timeout=30000)
             email.fill(cpf)
 
+            # Avança o primeiro formulário
             pagina.locator("form").get_by_role("button", name="Entrar").click()
 
             pagina.wait_for_timeout(2000)
 
-            # fluxo opcional (não quebra login)
-            try:
-                botao_senha = pagina.get_by_text("Prefiro entrar com senha")
-                if botao_senha.count() > 0:
-                    botao_senha.first.click(timeout=5000)
-            except:
-                pass
+            # 3. Força o clique em "Prefiro entrar com senha" usando a estrutura do botão real
+            print("[INFO] Alternando para fluxo de senha...", flush=True)
+            botao_senha = pagina.get_by_role("button", name="Prefiro entrar com senha").first
+            
+            # Caso o get_by_role falhe por conta da div interna, usamos o seletor por texto plano como plano B
+            if botao_senha.count() == 0:
+                botao_senha = pagina.get_by_text("Prefiro entrar com senha").first
 
-            # espera segura do campo senha (sem count())
-            senha_input = pagina.locator("[data-testid='password'], input[type='password']").first
+            botao_senha.wait_for(timeout=20000)
+            botao_senha.click()
 
+            # 4. Espera segura e preenchimento do campo de senha usando o data-testid exato do HTML
+            senha_input = pagina.get_by_test_id("password").first
+            
             try:
                 senha_input.wait_for(timeout=30000)
             except:
-                raise Exception("Campo de senha não apareceu no Render")
+                raise Exception("Campo de senha (data-testid='password') não apareceu no Render")
 
             senha_input.fill(senha)
 
+            # Confirma o login definitivo
             pagina.locator("form").get_by_role("button", name="Entrar").click()
 
             pagina.wait_for_timeout(3000)
 
-            manager = pagina.locator("[data-testid='entityManager']")
+            # Valida se o login deu certo esperando o elemento do painel
+            manager = pagina.locator("[data-testid='entityManager']").first
             manager.wait_for(timeout=60000)
 
             print(f"[OK] Login realizado na tentativa {tentativa}", flush=True)
@@ -136,47 +146,61 @@ def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
                 ],
             )
 
+            # Criando o contexto simulando um ambiente real com User-Agent ativo
             context = browser.new_context(
                 viewport={"width": 1366, "height": 768},
                 accept_downloads=True,
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
             )
 
             page = context.new_page()
             page.set_default_timeout(60000)
 
+            # Realiza o fluxo de login atualizado
             _fazer_login(page, cpf, senha)
 
-            page.get_by_test_id("entityManager").click()
-            page.get_by_role("menuitem", name="Meus Eventos Minhas Páginas Á").click()
+            # Acessa o menu lateral de eventos de forma resiliente
+            try:
+                page.get_by_test_id("entityManager").click()
+                page.get_by_text("Meus Eventos").first.click()
+            except:
+                # Fallback genérico caso o menu estrutural mude de nome
+                page.get_by_role("menuitem", name=re.compile("Meus Eventos", re.IGNORECASE)).click()
 
             page.locator("p.side-event-title").first.wait_for(timeout=60000)
             page.locator("p.side-event-title").first.click()
 
-            evento_locator = page.locator("a.event-list-link", has_text=evento)
+            evento_locator = page.locator("a.event-list-link", has_text=evento).first
 
             if evento_locator.count() == 0:
-                raise Exception(f"Evento '{evento}' não encontrado")
+                raise Exception(f"Evento '{evento}' não encontrado na listagem")
 
-            evento_locator.first.click()
-
+            evento_locator.click()
             print(f"[OK] Evento selecionado: {evento}", flush=True)
 
+            # Navegação interna do painel do evento
             page.locator("span", has_text="Ingressos").first.click()
             page.get_by_role("link", name="Gerenciar Ingressos").click()
 
-            page.locator("button", has_text="Exportar").click()
-            page.locator("#advance-btn-small-step-alert").wait_for(timeout=60000)
+            # Dispara a exportação da planilha
+            page.locator("button", has_text="Exportar").first.click()
+            
+            # Aguarda o botão final de download (aceita o ID antigo ou o texto "Download" do modal)
+            botao_download = page.locator("#advance-btn-small-step-alert, button:has-text('Download')").first
+            botao_download.wait_for(timeout=60000)
 
+            # Captura e salva o fluxo de download do arquivo .xls
             with page.expect_download(timeout=120000) as download_info:
-                page.locator("#advance-btn-small-step-alert").click()
+                botao_download.click()
 
             download = download_info.value
             download.save_as(caminho_temporario)
 
-            print(f"[OK] Download salvo: {caminho_temporario}", flush=True)
+            print(f"[OK] Download salvo localmente em: {caminho_temporario}", flush=True)
 
             caminho_storage = f"exports_cheers/{nome_arquivo}"
 
+            # Faz o upload do arquivo final consolidado para o Supabase
             with open(caminho_temporario, "rb") as f:
                 supabase_client.storage.from_("uploads").upload(
                     path=caminho_storage,
@@ -187,8 +211,7 @@ def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
                     },
                 )
 
-            print(f"[OK] Upload concluído: {caminho_storage}", flush=True)
-
+            print(f"[OK] Upload concluído para o Supabase: {caminho_storage}", flush=True)
             return caminho_storage
 
     finally:
