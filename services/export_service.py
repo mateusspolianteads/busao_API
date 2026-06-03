@@ -9,64 +9,59 @@ from supabase_client import supabase as supabase_client
 
 def _bloquear_recursos(contexto):
     def handler(route):
-        if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
-            route.abort()
-        else:
-            route.continue_()
+        try:
+            if route.request.resource_type in ["image", "media", "font", "stylesheet"]:
+                route.abort()
+            else:
+                route.continue_()
+        except:
+            pass
 
     contexto.route("**/*", handler)
 
 
 def _fazer_login(pagina, cpf, senha):
     for tentativa in range(1, 3):
+        # Define timeout dinâmico: 10s na primeira, 60s na segunda
+        timeout_val = 10000 if tentativa == 1 else 60000
+
         try:
-            print(f"[INFO] Tentativa login {tentativa}")
+            print(
+                f"[INFO] Iniciando tentativa de login {tentativa} (timeout: {timeout_val}ms)..."
+            )
 
             pagina.goto(
-                "https://cheers.com.br/",
-                wait_until="domcontentloaded",
-                timeout=5000 if tentativa == 1 else 60000,
+                "https://cheers.com.br/", wait_until="networkidle", timeout=timeout_val
             )
 
-            pagina.wait_for_timeout(1000 if tentativa == 1 else 2000)
-
-            pagina.wait_for_selector(
-                "#login-btn", timeout=30000 if tentativa == 1 else 60000
-            )
+            pagina.wait_for_selector("#login-btn", timeout=timeout_val)
             pagina.locator("#login-btn").click()
 
-            pagina.wait_for_selector(
-                "#email-input", timeout=30000 if tentativa == 1 else 60000
-            )
+            pagina.wait_for_selector("#email-input", timeout=timeout_val)
             pagina.locator("#email-input").fill(cpf)
 
             pagina.locator("form").get_by_role("button", name="Entrar").click()
 
             try:
                 pagina.get_by_text("Prefiro entrar com senha").click(
-                    timeout=5000 if tentativa == 1 else 15000
+                    timeout=timeout_val
                 )
             except:
-                raise Exception("Botão senha não apareceu")
+                pass
 
-            pagina.get_by_test_id("password").wait_for(timeout=60000)
-            pagina.get_by_test_id("password").fill(senha)
-
+            pagina.get_by_test_id("password").wait_for(timeout=timeout_val)
+            pagina.locator("[data-testid='password']").fill(senha)
             pagina.locator("form").get_by_role("button", name="Entrar").click()
 
-            pagina.get_by_test_id("entityManager").wait_for(timeout=60000)
-
-            print("[OK] Login realizado")
+            pagina.get_by_test_id("entityManager").wait_for(timeout=timeout_val)
+            print(f"[OK] Login realizado com sucesso na tentativa {tentativa}.")
             return
 
         except Exception as e:
-            print(f"[WARN] Falha login tentativa {tentativa}: {e}")
-
+            print(f"[WARN] Falha na tentativa {tentativa}: {e}")
             try:
                 pagina.goto(
-                    "https://cheers.com.br/",
-                    wait_until="domcontentloaded",
-                    timeout=20000,
+                    "https://cheers.com.br/", wait_until="networkidle", timeout=20000
                 )
             except:
                 pass
@@ -87,12 +82,12 @@ def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
     nome_limpo = _limpar_nome_arquivo(evento)
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     nome_arquivo = f"{nome_limpo}_{timestamp}.xls"
-
     caminho_temporario = os.path.join(tempfile.gettempdir(), nome_arquivo)
+
+    print(f"[INFO] Iniciando processo para o evento: {evento}")
 
     try:
         with sync_playwright() as p:
-
             browser = p.chromium.launch(
                 headless=True,
                 args=[
@@ -100,20 +95,22 @@ def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
                     "--disable-dev-shm-usage",
                     "--disable-gpu",
                     "--disable-extensions",
+                    "--disable-setuid-sandbox",
+                    "--disable-software-rasterizer",
                 ],
             )
-
             context = browser.new_context(
-                viewport={"width": 1280, "height": 720}, accept_downloads=True
+                viewport={"width": 1280, "height": 720},
+                accept_downloads=True,
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
             )
-
             _bloquear_recursos(context)
-
             page = context.new_page()
             page.set_default_timeout(60000)
 
             _fazer_login(page, cpf, senha)
 
+            print("[INFO] Navegando até a página do evento...")
             page.get_by_test_id("entityManager").click()
             page.get_by_role("menuitem", name="Meus Eventos Minhas Páginas Á").click()
 
@@ -121,30 +118,32 @@ def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
             page.locator("p.side-event-title").first.click()
 
             elemento_evento = page.locator("a.event-list-link", has_text=evento)
-
             elemento_evento.first.wait_for(timeout=60000)
 
             if elemento_evento.count() == 0:
+                print(f"[ERROR] Evento '{evento}' não encontrado.")
                 raise ValueError(f"Evento '{evento}' não encontrado")
 
             elemento_evento.click()
-            print(f"[OK] Evento selecionado: {evento}")
+            print(f"[OK] Evento '{evento}' selecionado.")
 
             page.locator("span", has_text="Ingressos").first.click()
             page.get_by_role("link", name="Gerenciar Ingressos").click()
 
+            print("[INFO] Solicitando exportação...")
             page.locator("button", has_text="Exportar").click()
             page.locator("#advance-btn-small-step-alert").wait_for(timeout=60000)
 
             with page.expect_download(timeout=120000) as download_info:
                 page.locator("#advance-btn-small-step-alert").click()
+                print("[INFO] Download iniciado...")
 
             download = download_info.value
             download.save_as(caminho_temporario)
-
-            print(f"[OK] Arquivo salvo local: {caminho_temporario}")
+            print(f"[OK] Arquivo salvo temporariamente: {caminho_temporario}")
 
             caminho_storage = f"exports_cheers/{nome_arquivo}"
+            print(f"[INFO] Iniciando upload para Supabase: {caminho_storage}")
 
             with open(caminho_temporario, "rb") as f:
                 supabase_client.storage.from_("uploads").upload(
@@ -156,13 +155,16 @@ def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
                     },
                 )
 
-            print(f"[OK] Upload Supabase: {caminho_storage}")
-
+            print("[OK] Upload finalizado com sucesso.")
             return caminho_storage
 
+    except Exception as e:
+        print(f"[ERROR] Erro crítico no processo: {e}")
+        raise e
     finally:
         try:
             if os.path.exists(caminho_temporario):
                 os.remove(caminho_temporario)
+                print("[INFO] Arquivo temporário removido.")
         except:
             pass
