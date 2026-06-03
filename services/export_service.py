@@ -63,6 +63,46 @@ def _fazer_login(pagina, cpf, senha):
         except Exception as e:
             print(f"[WARN] Falha tentativa {tentativa}: {e}", flush=True)
 
+            # --- SISTEMA DE EXTRAÇÃO DE TAGS E SCREENSHOT PARA DEBUG ---
+            try:
+                timestamp_erro = datetime.now().strftime("%Y%m%d_%H%M%S")
+                
+                # 1. Captura as tags HTML (DOM) completas da página
+                html_puro = pagina.content()
+                caminho_html = os.path.join(tempfile.gettempdir(), f"debug_tags_{timestamp_erro}.html")
+                with open(caminho_html, "w", encoding="utf-8") as f:
+                    f.write(html_puro)
+                
+                # 2. Tira um print visual do erro
+                caminho_print = os.path.join(tempfile.gettempdir(), f"debug_print_{timestamp_erro}.png")
+                pagina.screenshot(path=caminho_print)
+                
+                # 3. Faz o upload do arquivo HTML para o Supabase
+                with open(caminho_html, "rb") as f:
+                    supabase_client.storage.from_("uploads").upload(
+                        path=f"debug/tags_{timestamp_erro}.html",
+                        file=f,
+                        file_options={"content-type": "text/html", "upsert": "true"}
+                    )
+                
+                # 4. Faz o upload do Print para o Supabase
+                with open(caminho_print, "rb") as f:
+                    supabase_client.storage.from_("uploads").upload(
+                        path=f"debug/print_{timestamp_erro}.png",
+                        file=f,
+                        file_options={"content-type": "image/png", "upsert": "true"}
+                    )
+                
+                print(f"[DEBUG] Tags HTML salvas no Supabase em: debug/tags_{timestamp_erro}.html", flush=True)
+                print(f"[DEBUG] Print da tela salvo no Supabase em: debug/print_{timestamp_erro}.png", flush=True)
+                
+                # Limpa os arquivos de debug locais
+                if os.path.exists(caminho_html): os.remove(caminho_html)
+                if os.path.exists(caminho_print): os.remove(caminho_print)
+            except Exception as erro_debug:
+                print(f"[ERROR] Não foi possível extrair o HTML de debug: {erro_debug}", flush=True)
+            # -----------------------------------------------------------
+
             try:
                 pagina.context.clear_cookies()
                 pagina.wait_for_timeout(1500)
