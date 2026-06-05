@@ -34,8 +34,9 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "https://busaodorole.vercel.app",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
+        "https://busaorole.fwt.app.br",
+        "http://localhost:8000",
+        "http://127.0.0.1:8000",
     ],
     allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
     allow_credentials=True,
@@ -45,7 +46,6 @@ app.add_middleware(
 
 # GZip middleware para reduzir payloads de resposta
 app.add_middleware(GZipMiddleware, minimum_size=1000)
-
 # Cria tabelas
 Base.metadata.create_all(bind=engine)
 
@@ -53,6 +53,7 @@ print("Tabelas verificadas:", datetime.now())
 
 # Serve arquivos estáticos com cache-control
 app.mount("/static", StaticFiles(directory="static"), name="static")
+
 
 @app.middleware("http")
 async def add_cache_control(request: Request, call_next):
@@ -64,6 +65,7 @@ async def add_cache_control(request: Request, call_next):
     except Exception:
         pass
     return response
+
 
 # Rotas
 app.include_router(usuarios.router)
