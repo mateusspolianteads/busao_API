@@ -12,71 +12,61 @@ def _fazer_login(pagina, cpf, senha):
         try:
             print(f"[INFO] Tentativa login {tentativa}", flush=True)
 
-            # Abre a página inicial
+            # Abre a página inicial de forma mais leve
             pagina.goto(
                 "https://cheers.com.br/",
-                wait_until="domcontentloaded",
-                timeout=60000,
+                wait_until="commit",  # Não espera carregar trackers pesados para interagir
+                timeout=45000,
             )
 
-            # Aguarda um tempo humano para carregamento de scripts assíncronos
-            pagina.wait_for_timeout(4000)
+            # Evita o uso de pagina.content() [Consome muita memória RAM]
+            # Procura diretamente por elementos típicos de desafio do Cloudflare
+            cloudflare_box = pagina.locator("#cloudflare-challenge, iframe[src*='challenges.cloudflare.com']").first
+            if cloudflare_box.count() > 0:
+                print("[WARN] Cloudflare/Turnstile detectado! Aguardando estabilização...", flush=True)
+                pagina.wait_for_load_state("networkidle", timeout=10000)
+            else:
+                pagina.wait_for_timeout(2000)
 
-            # Detecção de barreira do Cloudflare (Desafio de Verificação)
-            conteudo_pagina = pagina.content().lower()
-            if "cloudflare" in conteudo_pagina or "just a moment" in conteudo_pagina:
-                print("[WARN] Cloudflare detectado na página! Aguardando bypass automático...", flush=True)
-                pagina.wait_for_timeout(6000)
-
-            # 1. Clica no botão de Entrar (Mobile/Responsivo conforme o HTML real)
+            # 1. Clica no botão de Entrar
             login_btn = pagina.locator("#login-btn-mobile, #login-btn").first
-            login_btn.wait_for(timeout=30000)
+            login_btn.wait_for(state="visible", timeout=20000)
             
-            # Movimento simulado antes de clicar para quebrar heurísticas de bot
+            # Movimento simulado sutil
             login_btn.hover()
-            pagina.wait_for_timeout(300)
             login_btn.click()
 
             # 2. Preenche o campo de e-mail/CPF
             email = pagina.locator("#email-input, input[placeholder*='CPF']").first
-            email.wait_for(timeout=30000)
-            email.focus()
+            email.wait_for(state="visible", timeout=20000)
             email.fill(cpf)
 
             # Avança o primeiro formulário
             pagina.locator("form").get_by_role("button", name="Entrar").click()
 
-            pagina.wait_for_timeout(3000)
+            # Espera a transição de estado sem travar o processo
+            pagina.wait_for_load_state("domcontentloaded")
 
-            # 3. Força o clique em "Prefiro entrar com senha" usando a estrutura do botão real
+            # 3. Força o clique em "Prefiro entrar com senha"
             print("[INFO] Alternando para fluxo de senha...", flush=True)
             botao_senha = pagina.get_by_role("button", name="Prefiro entrar com senha").first
-            
             if botao_senha.count() == 0:
                 botao_senha = pagina.get_by_text("Prefiro entrar com senha").first
 
-            botao_senha.wait_for(timeout=20000)
+            botao_senha.wait_for(state="visible", timeout=15000)
             botao_senha.click()
 
-            # 4. Espera segura e preenchimento do campo de senha usando o data-testid exato do HTML
+            # 4. Preenchimento do campo de senha
             senha_input = pagina.get_by_test_id("password").first
-            
-            try:
-                senha_input.wait_for(timeout=30000)
-            except:
-                raise Exception("Campo de senha (data-testid='password') não apareceu no Render")
-
-            senha_input.focus()
+            senha_input.wait_for(state="visible", timeout=15000)
             senha_input.fill(senha)
 
             # Confirma o login definitivo
             pagina.locator("form").get_by_role("button", name="Entrar").click()
 
-            pagina.wait_for_timeout(4000)
-
-            # Valida se o login deu certo esperando o elemento do painel interno
+            # Valida o login esperando o painel interno
             manager = pagina.locator("[data-testid='entityManager']").first
-            manager.wait_for(timeout=60000)
+            manager.wait_for(state="visible", timeout=45000)
 
             print(f"[OK] Login realizado na tentativa {tentativa}", flush=True)
             return
@@ -84,9 +74,27 @@ def _fazer_login(pagina, cpf, senha):
         except Exception as e:
             print(f"[WARN] Falha tentativa {tentativa}: {e}", flush=True)
 
+            # Geração de logs de debug otimizada para menor consumo de memória
+            try:
+                timestamp_erro = datetime.now().strftime("%Y%m%d_%H%M%S")
+                caminho_print = os.path.join(tempfile.gettempdir(), f"debug_print_{timestamp_erro}.png")
+                pagina.screenshot(path=caminho_print, type="jpeg", quality=60) # JPEG consome menos RAM/espaço que PNG
+                
+                with open(caminho_print, "rb") as f:
+                    supabase_client.storage.from_("uploads").upload(
+                        path=f"debug/print_{timestamp_erro}.jpeg",
+                        file=f,
+                        file_options={"content-type": "image/jpeg", "upsert": "true"}
+                    )
+                if os.path.exists(caminho_print): 
+                    os.remove(caminho_print)
+            except Exception as erro_debug:
+                print(f"[ERROR] Não foi possível extrair mídia de debug: {erro_debug}", flush=True)
+
+            # Limpeza agressiva de estado do navegador em caso de erro
             try:
                 pagina.context.clear_cookies()
-                pagina.wait_for_timeout(2000)
+                pagina.context.clear_permissions()
             except:
                 pass
 
@@ -105,90 +113,80 @@ def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
     nome_arquivo = f"{nome_limpo}_{timestamp}.xls"
     caminho_temporario = os.path.join(tempfile.gettempdir(), nome_arquivo)
 
+    # Inicialização de variáveis para garantir fechamento correto no 'finally'
+    browser = None
+    context = None
+    
     try:
         with sync_playwright() as p:
-            # 1. Parâmetros críticos de inicialização do Chromium para Evasão Antibot
+            # 1. Argumentos focados em performance extrema (baixa RAM) e evasão silenciosa
             browser = p.chromium.launch(
                 headless=True,
                 args=[
                     "--no-sandbox",
                     "--disable-dev-shm-usage",
+                    "--disable-setuid-sandbox",
+                    "--no-zygote",                  # Evita processos clones órfãos consumindo RAM
+                    "--single-process",             # Junta os processos do Chrome em uma única thread (economia drástica de memória em VPS)
                     "--disable-gpu",
-                    "--disable-extensions",
                     "--disable-blink-features=AutomationControlled",
-                    "--disable-infobars",
                     "--ignore-certificate-errors"
                 ],
             )
 
-            # 2. Criação do contexto mimetizando perfeitamente uma máquina desktop local e brasileira
+            # 2. Contexto limpo sem injeções manuais de JS detectáveis
             context = browser.new_context(
-                viewport={"width": 1366, "height": 768},
+                viewport={"width": 1280, "height": 720}, # Resolução reduzida levemente para poupar memória gráfica simulada
                 accept_downloads=True,
                 user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
                 locale="pt-BR",
-                timezone_id="America/Sao_Paulo",
-                extra_http_headers={
-                    "Accept-Language": "pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7",
-                    "Connection": "keep-alive"
-                }
+                timezone_id="America/Sao_Paulo"
             )
 
-            # 3. Scripts de Injeção Avançada (Garante que propriedades do JS não dedurem o Headless no Render)
-            context.add_init_script("""
-                Object.defineProperty(navigator, 'webdriver', { get: () => undefined });
-                window.chrome = { runtime: {} };
-                Object.defineProperty(navigator, 'plugins', { get: () => [1, 2, 3, 4, 5] });
-                Object.defineProperty(navigator, 'languages', { get: () => ['pt-BR', 'pt', 'en-US', 'en'] });
-            """)
-
             page = context.new_page()
-            page.set_default_timeout(60000)
+            page.set_default_timeout(45000) # Reduzido de 60s para evitar que processos travados fiquem prendendo a RAM do servidor
 
-            # Executa o fluxo de login camuflado
+            # Executa o fluxo de login
             _fazer_login(page, cpf, senha)
 
-            # Acessa o menu lateral de eventos de forma resiliente
+            # Navegação interna do painel
             try:
                 page.get_by_test_id("entityManager").click()
                 page.get_by_text("Meus Eventos").first.click()
             except:
                 page.get_by_role("menuitem", name=re.compile("Meus Eventos", re.IGNORECASE)).click()
 
-            page.locator("p.side-event-title").first.wait_for(timeout=60000)
+            page.locator("p.side-event-title").first.wait_for(state="visible", timeout=30000)
             page.locator("p.side-event-title").first.click()
 
             evento_locator = page.locator("a.event-list-link", has_text=evento).first
-
             if evento_locator.count() == 0:
                 raise Exception(f"Evento '{evento}' não encontrado na listagem")
 
             evento_locator.click()
             print(f"[OK] Evento selecionado: {evento}", flush=True)
 
-            # Navegação interna do painel do evento
+            # Abas internas do evento
             page.locator("span", has_text="Ingressos").first.click()
             page.get_by_role("link", name="Gerenciar Ingressos").click()
 
-            # Dispara a exportação da planilha
+            # Dispara exportação
             page.locator("button", has_text="Exportar").first.click()
             
-            # Aguarda o botão final de download
             botao_download = page.locator("#advance-btn-small-step-alert, button:has-text('Download')").first
-            botao_download.wait_for(timeout=60000)
+            botao_download.wait_for(state="visible", timeout=45000)
 
-            # Captura e salva o fluxo de download do arquivo .xls
-            with page.expect_download(timeout=120000) as download_info:
+            # Coleta do arquivo
+            with page.expect_download(timeout=60000) as download_info:
                 botao_download.click()
 
             download = download_info.value
             download.save_as(caminho_temporario)
-
             print(f"[OK] Download salvo localmente em: {caminho_temporario}", flush=True)
 
             caminho_storage = f"exports_cheers/{nome_arquivo}"
 
-            # Faz o upload do arquivo final consolidado para o Supabase
+            # Upload para o Supabase
             with open(caminho_temporario, "rb") as f:
                 supabase_client.storage.from_("uploads").upload(
                     path=caminho_storage,
@@ -203,6 +201,13 @@ def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
             return caminho_storage
 
     finally:
+        # Coleta de lixo e encerramento manual e seguro de processos para evitar vazamentos de memória na VPS
+        if context:
+            try: context.close()
+            except: pass
+        if browser:
+            try: browser.close()
+            except: pass
         try:
             if os.path.exists(caminho_temporario):
                 os.remove(caminho_temporario)
