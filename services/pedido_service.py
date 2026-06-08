@@ -208,15 +208,16 @@ def obter_dados_dashboard(
     }
 
 
-def deletar_pedido(db: Session, pedido_id: int):
-    pedido = db.query(Pedido).filter(Pedido.id == pedido_id).first()
+def deletar_pedidos_do_evento(db: Session, evento_id: int):
+    pedidos = db.query(Pedido).filter(Pedido.evento_id == evento_id).all()
 
-    if not pedido:
-        raise HTTPException(status_code=404, detail="Pedido não encontrado")
+    if not pedidos:
+        raise HTTPException(status_code=404, detail="Nenhum pedido encontrado para o evento")
 
-    cliente_id = pedido.cliente_id
+    for pedido in pedidos:
+        cliente_id = pedido.cliente_id
+        db.delete(pedido)
 
-    db.delete(pedido)
     db.commit()
 
     # verifica se o cliente ainda tem pedidos
@@ -232,4 +233,4 @@ def deletar_pedido(db: Session, pedido_id: int):
             db.delete(cliente)
             db.commit()
 
-    return {"mensagem": "Pedido deletado com sucesso"}
+    return {"mensagem": "Pedidos do evento deletados com sucesso"}
