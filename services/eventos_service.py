@@ -5,13 +5,20 @@ from services.crm_service import processar_novo_evento
 
 def criar_evento(db, dados):
 
+    evento_existente = db.query(Evento).filter(Evento.nome == dados.nome).first()
+
+    if evento_existente:
+        raise HTTPException(
+            status_code=400, detail="Já existe um evento com este nome."
+        )
+
     novo_evento = Evento(
         nome=dados.nome,
         categoria_id=dados.categoria_id,
         data_evento=dados.data_evento,
         local=dados.local,
         valor_passagem=dados.valor_passagem,
-        imagem=dados.imagem
+        imagem=dados.imagem,
     )
 
     db.add(novo_evento)
@@ -39,7 +46,7 @@ def atualizar_evento(db, evento_id, dados):
     evento = db.query(Evento).filter(Evento.id == evento_id).first()
 
     if not evento:
-        return None
+        raise HTTPException(status_code=404, detail="Evento não encontrado")
 
     if dados.nome is not None:
         evento.nome = dados.nome
@@ -65,13 +72,25 @@ def atualizar_evento(db, evento_id, dados):
     return evento
 
 
+from fastapi import HTTPException
+from sqlalchemy.exc import IntegrityError
+
+
 def deletar_evento(db, evento_id):
     evento = db.query(Evento).filter(Evento.id == evento_id).first()
 
     if not evento:
-        return False
+        raise HTTPException(status_code=404, detail="Evento não encontrado")
 
-    db.delete(evento)
-    db.commit()
+    try:
+        db.delete(evento)
+        db.commit()
+        return True
 
-    return True
+    except IntegrityError:
+        db.rollback()
+
+        raise HTTPException(
+            status_code=400,
+            detail="Não é possível excluir este evento porque existem clientes ou pedidos vinculados a ele.",
+        )

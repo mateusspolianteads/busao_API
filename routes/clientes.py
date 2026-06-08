@@ -6,13 +6,14 @@ from utils.auth import verify_token
 from schemas.cliente import ClienteUpdate
 from services.cliente_service import (
     deletar_cliente_por_id,
-    deletar_clientes,
     listar_clientes,
     atualizar_cliente,
     listar_clientes_por_evento,
 )
 
-router = APIRouter(prefix="/clientes", tags=["Clientes"], dependencies=[Depends(verify_token)])
+router = APIRouter(
+    prefix="/clientes", tags=["Clientes"], dependencies=[Depends(verify_token)]
+)
 
 
 @router.get("/listar")
@@ -32,7 +33,10 @@ def listar(db: Session = Depends(get_db)):
 def atualizar(id: int, cliente: ClienteUpdate, db: Session = Depends(get_db)):
     try:
         cliente_atualizado = atualizar_cliente(db, id, cliente)
-        return {"mensagem": "Cliente atualizado com sucesso", "cliente": cliente_atualizado}
+        return {
+            "mensagem": "Cliente atualizado com sucesso",
+            "cliente": cliente_atualizado,
+        }
     except HTTPException:
         raise
     except Exception as e:
@@ -53,6 +57,7 @@ def listar_por_evento(
     clientes, total = listar_clientes_por_evento(db, evento_id, pagina, limite, search)
     return {"clientes": clientes, "total": total}
 
+
 @router.delete("/deletar/{id}")
 def deletar(id: int, db: Session = Depends(get_db)):
     try:
@@ -64,7 +69,4 @@ def deletar(id: int, db: Session = Depends(get_db)):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Erro ao deletar cliente: {str(e)}",
         )
-    
-@router.delete("/deletar")
-def deletar_todos_clientes(db: Session = Depends(get_db)):
-    return deletar_clientes(db)
+

@@ -105,13 +105,14 @@ def listar_pedido_por_evento(
     }
 
 
-def obter_dados_dashboard(db: Session, canal_venda: str = None, periodo: str = None) -> dict:
+def obter_dados_dashboard(
+    db: Session, canal_venda: str = None, periodo: str = None
+) -> dict:
     if db.bind.dialect.name == "postgresql":
         periodo_expr = func.to_char(Pedido.data_venda, "YYYY-MM")
     else:
         periodo_expr = func.strftime("%Y-%m", Pedido.data_venda)
 
-    # Cache dashboard aggregates for slightly longer TTL
     @cached(ttl=10)
     def _fetch_dashboard(canal_venda, periodo):
         vendedor_query = (
@@ -205,3 +206,20 @@ def obter_dados_dashboard(db: Session, canal_venda: str = None, periodo: str = N
         },
         "eventos": eventos,
     }
+
+
+def deletar_pedidos_do_evento(db, evento_id):
+    pedidos_removidos = (
+        db.query(Pedido)
+        .filter(Pedido.evento_id == evento_id)
+        .delete(synchronize_session=False)
+    )
+
+    if pedidos_removidos == 0:
+        raise HTTPException(
+            status_code=404, detail="Nenhum pedido encontrado para este evento."
+        )
+
+    db.commit()
+
+    return {"mensagem": "Pedidos removidos com sucesso."}
