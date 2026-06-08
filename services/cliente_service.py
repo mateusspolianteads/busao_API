@@ -92,3 +92,22 @@ def listar_clientes_por_evento(db, evento_id, pagina, limite, search):
         return clientes, total
 
     return _fetch(evento_id, pagina, limite, search)
+
+def deletar_cliente_por_id(db, cliente_id):
+    cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
+    if not cliente:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND, detail="Cliente não encontrado"
+        )
+
+    db.query(Pedido).filter(Pedido.cliente_id == cliente_id).delete()
+    db.delete(cliente)
+    db.commit()
+    return {"detail": "Cliente deletado com sucesso"}
+
+def deletar_clientes(db):
+    db.query(Pedido).delete()
+    db.query(Cliente).delete()
+    db.commit()
+
+    return {"detail": "Todos os clientes foram deletados com sucesso"}

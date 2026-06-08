@@ -1,5 +1,5 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 
 class LoginSchema(BaseModel):
-    email: EmailStr
-    senha: str
+    email: EmailStr = Field(..., example="user@example.com")
+    senha: str = Field(..., example="mudar123")

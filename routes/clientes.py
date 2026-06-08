@@ -5,6 +5,8 @@ from utils.auth import verify_token
 
 from schemas.cliente import ClienteUpdate
 from services.cliente_service import (
+    deletar_cliente_por_id,
+    deletar_clientes,
     listar_clientes,
     atualizar_cliente,
     listar_clientes_por_evento,
@@ -50,3 +52,19 @@ def listar_por_evento(
 ):
     clientes, total = listar_clientes_por_evento(db, evento_id, pagina, limite, search)
     return {"clientes": clientes, "total": total}
+
+@router.delete("/deletar/{id}")
+def deletar(id: int, db: Session = Depends(get_db)):
+    try:
+        return deletar_cliente_por_id(db, id)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Erro ao deletar cliente: {str(e)}",
+        )
+    
+@router.delete("/deletar")
+def deletar_todos_clientes(db: Session = Depends(get_db)):
+    return deletar_clientes(db)
