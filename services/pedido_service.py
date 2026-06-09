@@ -207,30 +207,31 @@ def obter_dados_dashboard(
         "eventos": eventos,
     }
 
+from sqlalchemy import text
 
 def deletar_pedidos_do_evento(db: Session, evento_id: int):
-    pedidos = db.query(Pedido).filter(Pedido.evento_id == evento_id).all()
 
-    if not pedidos:
-        raise HTTPException(status_code=404, detail="Nenhum pedido encontrado para o evento")
-
-    for pedido in pedidos:
-        cliente_id = pedido.cliente_id
-        db.delete(pedido)
-
-    db.commit()
-
-    # verifica se o cliente ainda tem pedidos
-    pedidos_restantes = (
+    deletados = (
         db.query(Pedido)
-        .filter(Pedido.cliente_id == cliente_id)
-        .count()
+        .filter(Pedido.evento_id == evento_id)
+        .delete(synchronize_session=False)
     )
 
-    if pedidos_restantes == 0:
-        cliente = db.query(Cliente).filter(Cliente.id == cliente_id).first()
-        if cliente:
-            db.delete(cliente)
-            db.commit()
+    if deletados == 0:
+        raise HTTPException(
+            status_code=404,
+            detail="Nenhum pedido encontrado para o evento"
+        )
+
+    db.execute(text("""
+        DELETE FROM clientes c
+        WHERE NOT EXISTS (
+            SELECT 1
+            FROM pedidos p
+            WHERE p.cliente_id = c.id
+        )
+    """))
+
+    db.commit()
 
     return {"mensagem": "Pedidos do evento deletados com sucesso"}
