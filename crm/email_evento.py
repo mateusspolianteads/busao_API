@@ -1,10 +1,9 @@
 def template_novo_evento(cliente, evento):
-
     return f"""
     <div style="
         background:#0f172a;
         padding:40px;
-        font-family:Arial;
+        font-family:Arial,sans-serif;
         color:white;
     ">
 
@@ -22,31 +21,15 @@ def template_novo_evento(cliente, evento):
             Detectamos que você curte eventos dessa categoria 👀
         </p>
 
-        <img 
+        <img
             src="{evento.imagem}"
+            alt="{evento.nome}"
             style="
                 width:100%;
                 border-radius:16px;
                 margin-top:20px;
             "
         >
-
-        <div style="margin-top:30px;">
-
-            <a href="https://busaodorole.com/evento/{evento.id}"
-                style="
-                    background:#22c55e;
-                    padding:14px 24px;
-                    border-radius:10px;
-                    color:white;
-                    text-decoration:none;
-                    font-weight:bold;
-                "
-            >
-                Comprar ingresso
-            </a>
-
-        </div>
 
         <p style="margin-top:30px;">
             🚍 Transporte ida e volta disponível
