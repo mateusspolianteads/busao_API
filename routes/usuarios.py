@@ -47,7 +47,7 @@ def esqueci_senha(dados: EsqueciSenhaSchema, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=404, detail="Email não encontrado")
     token = criar_token_reset_senha(user.email)
-    link = f"http://localhost:5500/templates/resetar-senha.html?token={token}"
+    link = f"https://busaodorole.vercel.app/resetar-senha.html?token={token}"
     html = template_reset_senha(user.nome, link)
     enviar_email(destinatario=user.email, nome=user.nome, assunto="Redefinição de senha", html=html)
     return {"mensagem": "Email enviado com sucesso"}

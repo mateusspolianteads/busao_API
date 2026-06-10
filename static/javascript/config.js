@@ -1,6 +1,6 @@
 window.API_URL = (window.location.origin.includes("localhost") || window.location.origin.includes("127.0.0.1"))
   ? "http://127.0.0.1:8000"
-  : "https://busao-api.onrender.com";
+  : "https://busaorole.fwt.app.br";
 
 window.SUPABASE_URL = "https://okazcozfvmvbkagxdwon.supabase.co";
 
