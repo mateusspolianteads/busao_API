@@ -19,12 +19,11 @@ def _fazer_login(pagina, cpf, senha):
                 timeout=45000,
             )
 
-            # Evita o uso de pagina.content() [Consome muita memória RAM]
             # Procura diretamente por elementos típicos de desafio do Cloudflare
             cloudflare_box = pagina.locator("#cloudflare-challenge, iframe[src*='challenges.cloudflare.com']").first
             if cloudflare_box.count() > 0:
                 print("[WARN] Cloudflare/Turnstile detectado! Aguardando estabilização...", flush=True)
-                pagina.wait_for_load_state("networkidle", timeout=10000)
+                pagina.wait_for_load_state("networkidle", timeout=15000)
             else:
                 pagina.wait_for_timeout(2000)
 
@@ -32,7 +31,7 @@ def _fazer_login(pagina, cpf, senha):
             login_btn = pagina.locator("#login-btn-mobile, #login-btn").first
             login_btn.wait_for(state="visible", timeout=20000)
             
-            # Movimento simulado sutil
+            # Movimento simulado sutil e clique
             login_btn.hover()
             login_btn.click()
 
@@ -77,8 +76,8 @@ def _fazer_login(pagina, cpf, senha):
             # Geração de logs de debug otimizada para menor consumo de memória
             try:
                 timestamp_erro = datetime.now().strftime("%Y%m%d_%H%M%S")
-                caminho_print = os.path.join(tempfile.gettempdir(), f"debug_print_{timestamp_erro}.png")
-                pagina.screenshot(path=caminho_print, type="jpeg", quality=60) # JPEG consome menos RAM/espaço que PNG
+                caminho_print = os.path.join(tempfile.gettempdir(), f"debug_print_{timestamp_erro}.jpeg")
+                pagina.screenshot(path=caminho_print, type="jpeg", quality=60)
                 
                 with open(caminho_print, "rb") as f:
                     supabase_client.storage.from_("uploads").upload(
@@ -113,38 +112,44 @@ def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
     nome_arquivo = f"{nome_limpo}_{timestamp}.xls"
     caminho_temporario = os.path.join(tempfile.gettempdir(), nome_arquivo)
 
-    # Inicialização de variáveis para garantir fechamento correto no 'finally'
     browser = None
     context = None
     
     try:
         with sync_playwright() as p:
-            # 1. Argumentos focados em performance extrema (baixa RAM) e evasão silenciosa
+            # 1. Argumentos focados em performance em VPS e evasão silenciosa
             browser = p.chromium.launch(
                 headless=True,
                 args=[
                     "--no-sandbox",
                     "--disable-dev-shm-usage",
                     "--disable-setuid-sandbox",
-                    "--no-zygote",                  # Evita processos clones órfãos consumindo RAM
-                    "--single-process",             # Junta os processos do Chrome em uma única thread (economia drástica de memória em VPS)
+                    "--no-zygote",                  
+                    # "--single-process", # Se a VPS tiver menos de 1GB de RAM deserte se der crash.
                     "--disable-gpu",
                     "--disable-blink-features=AutomationControlled",
-                    "--ignore-certificate-errors"
+                    "--ignore-certificate-errors",
+                    "--disable-extensions",
+                    "--window-position=0,0"
                 ],
             )
 
-            # 2. Contexto limpo sem injeções manuais de JS detectáveis
-            context = browser.new_context(
-                viewport={"width": 1280, "height": 720}, # Resolução reduzida levemente para poupar memória gráfica simulada
-                accept_downloads=True,
-                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-                locale="pt-BR",
-                timezone_id="America/Sao_Paulo"
-            )
+            # 2. Configurações de Contexto
+            context_args = {
+                "viewport": {"width": 1280, "height": 720},
+                "accept_downloads": True,
+                "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+                "locale": "pt-BR",
+                "timezone_id": "America/Sao_Paulo"
+            }
+            
+            # Se der erro do Cloudflare travar no servidor, adicione seu proxy aqui:
+            # context_args["proxy"] = {"server": "http://seu-proxy:porta", "username": "user", "password": "pwd"}
 
+            context = browser.new_context(**context_args)
             page = context.new_page()
-            page.set_default_timeout(45000) # Reduzido de 60s para evitar que processos travados fiquem prendendo a RAM do servidor
+            
+            page.set_default_timeout(35000) 
 
             # Executa o fluxo de login
             _fazer_login(page, cpf, senha)
@@ -186,7 +191,7 @@ def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
 
             caminho_storage = f"exports_cheers/{nome_arquivo}"
 
-            # Upload para o Supabase
+            # Upload para o Supabase (Corrigido aqui: caminho_storage)
             with open(caminho_temporario, "rb") as f:
                 supabase_client.storage.from_("uploads").upload(
                     path=caminho_storage,
@@ -201,7 +206,7 @@ def exportar_ingressos(cpf: str, senha: str, evento: str) -> str:
             return caminho_storage
 
     finally:
-        # Coleta de lixo e encerramento manual e seguro de processos para evitar vazamentos de memória na VPS
+        # Encerramento manual seguro de processos
         if context:
             try: context.close()
             except: pass
