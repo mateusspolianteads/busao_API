@@ -1,6 +1,6 @@
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import func, text
 from models.pedido import Pedido
 from models.evento import Evento
 from models.cliente import Cliente
@@ -130,6 +130,7 @@ def obter_dados_dashboard(
 
         if canal_venda:
             base_query = base_query.filter(Pedido.canal_venda == canal_venda)
+
         if periodo:
             base_query = base_query.filter(periodo_expr == periodo)
 
@@ -148,12 +149,12 @@ def obter_dados_dashboard(
             Evento.nome.label("nome"),
             func.count(Pedido.id).label("total_pedidos"),
             func.coalesce(func.sum(Pedido.valor_lote), 0.0).label("total_vendas"),
-            func.max(Pedido.canal_venda).label("canal_venda"),
             func.max(periodo_expr).label("periodo"),
         ).join(Pedido, Pedido.evento_id == Evento.id)
 
         if canal_venda:
             eventos_query = eventos_query.filter(Pedido.canal_venda == canal_venda)
+
         if periodo:
             eventos_query = eventos_query.filter(periodo_expr == periodo)
 
@@ -174,13 +175,6 @@ def obter_dados_dashboard(
 
     dashboard_data = _fetch_dashboard(canal_venda, periodo)
 
-    vendedores = dashboard_data["vendedores"]
-    periodos = dashboard_data["periodos"]
-    total_vendas = dashboard_data["total_vendas"]
-    ingressos_vendidos = dashboard_data["ingressos_vendidos"]
-    eventos_com_venda = dashboard_data["eventos_com_venda"]
-    eventos_result = dashboard_data["eventos_result"]
-
     eventos = [
         {
             "evento_id": e.evento_id,
@@ -188,26 +182,24 @@ def obter_dados_dashboard(
             "evento_nome": e.nome,
             "total_pedidos": int(e.total_pedidos or 0),
             "total_vendas": float(e.total_vendas or 0),
-            "canal_venda": e.canal_venda,
             "periodo": e.periodo,
         }
-        for e in eventos_result
+        for e in dashboard_data["eventos_result"]
     ]
 
     return {
         "filtros": {
-            "vendedores": vendedores,
-            "periodos": periodos,
+            "vendedores": dashboard_data["vendedores"],
+            "periodos": dashboard_data["periodos"],
         },
         "totals": {
-            "total_vendas": total_vendas,
-            "ingressos_vendidos": ingressos_vendidos,
-            "eventos_com_venda": eventos_com_venda,
+            "total_vendas": dashboard_data["total_vendas"],
+            "ingressos_vendidos": dashboard_data["ingressos_vendidos"],
+            "eventos_com_venda": dashboard_data["eventos_com_venda"],
         },
         "eventos": eventos,
     }
 
-from sqlalchemy import text
 
 def deletar_pedidos_do_evento(db: Session, evento_id: int):
 
@@ -219,8 +211,7 @@ def deletar_pedidos_do_evento(db: Session, evento_id: int):
 
     if deletados == 0:
         raise HTTPException(
-            status_code=404,
-            detail="Nenhum pedido encontrado para o evento"
+            status_code=404, detail="Nenhum pedido encontrado para o evento"
         )
 
     db.execute(text("""
