@@ -56,11 +56,6 @@ async def processar_planilha_clientes_e_pedidos(
     clientes_importados = []
     pedidos_importados = 0
 
-    # 1. Mapeamento de Clientes existentes
-    # Nota: antes consultávamos todos os CPFs do banco — para bases grandes isso é custoso.
-    # Agora vamos buscar apenas os CPFs que aparecem na planilha (após limpar o dataframe),
-    # evitando carregar toda a tabela de clientes na memória.
-
     # Função auxiliar para garantir formato estrito de data texturizada (AAAA-MM-DD HH:MM:SS)
     def formatar_data_estrita(dt):
         if dt is None or pd.isna(dt):
